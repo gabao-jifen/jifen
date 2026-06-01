@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>小朋友积分奖惩表</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f4f0;color:#2C2C2A;line-height:1.6;padding-bottom:40px}
+.wrap{max-width:900px;margin:0 auto;padding:20px 16px}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.title{font-size:18px;font-weight:600;color:#2C2C2A;cursor:pointer;display:flex;align-items:center;gap:4px;transition:color 0.15s}
+.title:hover{color:#185FA5}
+.title-icon{font-size:22px}
+.title-edit-hint{font-size:11px;color:#888780;font-weight:400;opacity:0;margin-left:6px;transition:opacity 0.15s}
+.title:hover .title-edit-hint{opacity:1}
+.title-input{font-size:18px;font-weight:600;color:#2C2C2A;border:1px solid #85B7EB;border-radius:8px;padding:2px 8px;outline:none;background:#fff;width:220px}
+.header-right{display:flex;gap:8px;align-items:center}
+.edit-toggle{background:none;border:1px solid #d3d1c7;border-radius:8px;padding:6px 14px;font-size:13px;color:#5F5E5A;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:4px}
+.edit-toggle:hover{border-color:#185FA5;color:#185FA5}
+.edit-toggle.active{background:#185FA5;color:#fff;border-color:#185FA5}
+.score-board{display:flex;gap:10px;flex-wrap:wrap}
+.score-card{background:#fff;border-radius:10px;padding:10px 16px;min-width:100px;text-align:center;border:1px solid #e8e7e2}
+.score-label{font-size:11px;color:#888780;margin-bottom:2px}
+.score-val{font-size:22px;font-weight:600}
+.score-val.plus{color:#3B6D11}
+.score-val.minus{color:#A32D2D}
+.score-val.total{color:#185FA5}
+.tabs{display:flex;gap:0;border-bottom:2px solid #e8e7e2;margin-bottom:18px;background:#fff;border-radius:10px 10px 0 0;border:1px solid #e8e7e2;border-bottom:none;overflow:hidden}
+.tab{padding:10px 18px;font-size:14px;cursor:pointer;color:#888780;background:none;border:none;font-weight:400;transition:all 0.2s;flex:1;text-align:center}
+.tab.active{color:#185FA5;font-weight:600;background:#EEF5FB}
+.tab:hover:not(.active){background:#f9f8f5}
+.panel{display:none;background:#fff;border:1px solid #e8e7e2;border-radius:0 0 10px 10px;padding:18px 16px}
+.panel.active{display:block}
+.date-row{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.date-row label{font-size:14px;color:#5F5E5A;font-weight:500}
+.date-row input[type=date],.date-row input[type=month]{font-size:14px;padding:6px 10px;border:1px solid #e8e7e2;border-radius:8px;background:#fff;outline:none}
+.date-row input:focus{border-color:#85B7EB}
+.click-hint{font-size:12px;color:#888780;margin-bottom:12px;padding-left:2px}
+.rules-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:640px){.rules-grid{grid-template-columns:1fr}}
+.rule-group{border:1px solid #e8e7e2;border-radius:12px;overflow:hidden}
+.rule-group-title{padding:10px 14px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+.rule-group.reward .rule-group-title{background:#EAF3DE;color:#27500A}
+.rule-group.penalty .rule-group-title{background:#FCEBEB;color:#791F1F}
+.rule-item{display:flex;align-items:center;padding:9px 14px;border-top:1px solid #f1f0eb;gap:8px;transition:all 0.15s;background:#fff;user-select:none}
+.rule-item.clickable{cursor:pointer}
+.rule-item.clickable:hover{background:#f9f8f5}
+.rule-item.clickable:active{background:#EEF5EE;transform:scale(0.99)}
+.rule-text{font-size:13px;color:#2C2C2A;flex:1;line-height:1.5}
+.rule-pts{font-size:13px;font-weight:600;white-space:nowrap;min-width:42px;text-align:right}
+.rule-pts.p{color:#3B6D11}
+.rule-pts.m{color:#A32D2D}
+.rule-actions{display:flex;gap:4px;margin-left:4px;flex-shrink:0}
+.rule-actions .icon-btn{background:none;border:none;cursor:pointer;padding:3px;border-radius:4px;color:#888780;transition:all 0.15s;font-size:14px;line-height:1}
+.rule-actions .icon-btn:hover{color:#185FA5;background:#EEF5FB}
+.rule-actions .icon-btn.del:hover{color:#E24B4A;background:#FCEBEB}
+.rule-actions{display:none}
+body.edit-mode .rule-actions{display:flex}
+body.edit-mode .rule-item.clickable{cursor:default}
+body.edit-mode .rule-item.clickable:hover{background:#fff}
+body.edit-mode .rule-item.clickable:active{transform:none}
+body.edit-mode .add-rule-btn{display:flex}
+.add-rule-btn{display:none;align-items:center;justify-content:center;gap:4px;padding:10px 14px;border-top:1px dashed #d3d1c7;color:#888780;font-size:13px;cursor:pointer;background:#fafaf7;transition:all 0.15s;width:100%}
+.add-rule-btn:hover{background:#EEF5FB;color:#185FA5;border-color:#85B7EB}
+.log-table{width:100%;border-collapse:collapse;font-size:13px}
+.log-table th{text-align:left;padding:8px 10px;border-bottom:2px solid #e8e7e2;font-weight:600;font-size:12px;color:#888780;text-transform:uppercase;letter-spacing:0.5px}
+.log-table td{padding:8px 10px;border-bottom:1px solid #f1f0eb;vertical-align:middle}
+.log-table tbody tr:hover{background:#f9f8f5}
+.del-btn{background:none;border:1px solid #d3d1c7;border-radius:6px;padding:3px 10px;font-size:12px;color:#5F5E5A;cursor:pointer;transition:all 0.15s}
+.del-btn:hover{border-color:#E24B4A;color:#E24B4A;background:#FCEBEB}
+.empty-hint{text-align:center;padding:40px 20px;color:#888780;font-size:14px}
+.empty-icon{font-size:36px;margin-bottom:8px;display:block}
+.redeem-list{display:flex;flex-direction:column;gap:14px}
+.redeem-item{border:1px solid #e8e7e2;border-radius:12px;padding:14px 16px;background:#fff;transition:all 0.2s;position:relative}
+.redeem-item.unlocked-item{border-color:#97C459;background:#FCFFF7}
+.redeem-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
+.redeem-title{font-size:15px;font-weight:600;color:#2C2C2A}
+.redeem-desc{font-size:13px;color:#5F5E5A;line-height:1.6}
+.redeem-badge{display:inline-block;font-size:12px;padding:3px 10px;border-radius:20px;font-weight:500}
+.badge-locked{background:#f1f0eb;color:#888780}
+.badge-unlocked{background:#EAF3DE;color:#27500A}
+.redeem-btn{background:#3B6D11;color:#fff;border:none;border-radius:8px;padding:6px 16px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;margin-top:10px}
+.redeem-btn:hover{background:#27500A}
+.redeem-btn:disabled,
+.redeem-btn.btn-orange:disabled,
+.redeem-btn.btn-blue:disabled{background:#F5F5F0 !important;color:#A32D2D !important;cursor:not-allowed;font-weight:600;border:1px solid #D3D1C7}
+.redeem-btn.btn-orange{background:#BA7517}
+.redeem-btn.btn-orange:hover{background:#854F0B}
+.redeem-btn.btn-blue{background:#185FA5}
+.redeem-btn.btn-blue:hover{background:#0C447C}
+.redeem-info-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px;flex-wrap:wrap;gap:6px}
+.redeem-times{font-size:12px;color:#888780}
+.redeem-edit-btns{display:none;position:absolute;top:10px;right:12px;gap:4px}
+body.edit-mode .redeem-edit-btns{display:flex}
+body.edit-mode .add-reward-btn{display:flex}
+.add-reward-btn{display:none;align-items:center;justify-content:center;gap:4px;padding:14px;border:1px dashed #d3d1c7;border-radius:12px;color:#888780;font-size:13px;cursor:pointer;background:#fafaf7;transition:all 0.15s;width:100%}
+.add-reward-btn:hover{background:#EEF5FB;color:#185FA5;border-color:#85B7EB}
+.redeem-history{margin-top:20px;border-top:1px solid #e8e7e2;padding-top:16px}
+.redeem-history-title{font-size:14px;font-weight:600;color:#2C2C2A;margin-bottom:12px}
+.history-table{width:100%;border-collapse:collapse;font-size:13px}
+.history-table th{text-align:left;padding:7px 10px;border-bottom:2px solid #e8e7e2;font-weight:600;font-size:12px;color:#888780}
+.history-table td{padding:7px 10px;border-bottom:1px solid #f1f0eb;vertical-align:middle}
+.history-table tbody tr:hover{background:#f9f8f5}
+.history-badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:12px;font-weight:500;margin-left:6px}
+.history-badge.c0{background:#EAF3DE;color:#27500A}
+.history-badge.c1{background:#FAEEDA;color:#854F0B}
+.history-badge.c2{background:#E6F1FB;color:#185FA5}
+.history-badge.c3{background:#EEEDFE;color:#534AB7}
+.history-badge.c4{background:#FCEBEB;color:#791F1F}
+.history-badge.c5{background:#FDE8D0;color:#9A3B00}
+.history-badge.c6{background:#DFF5EE;color:#0D5C45}
+.history-badge.c7{background:#FFF8D6;color:#7A6B00}
+.history-badge.c8{background:#F5E6F7;color:#6B1F7A}
+.history-badge.c9{background:#E8E8E8;color:#3C3C3C}
+.history-badge.game{background:#FAEEDA;color:#854F0B}
+.history-badge.tv{background:#E6F1FB;color:#185FA5}
+.history-badge.play{background:#EEEDFE;color:#534AB7}
+.history-badge.reward{background:#EAF3DE;color:#27500A}
+.progress-bar{height:8px;background:#f1f0eb;border-radius:4px;margin-top:10px;overflow:hidden}
+.progress-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#97C459,#639922);transition:width 0.5s ease}
+.progress-text{font-size:12px;color:#888780;margin-top:5px}
+.month-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:16px}
+.stat-card{background:#f9f8f5;border-radius:10px;padding:10px 14px;text-align:center}
+.stat-label{font-size:11px;color:#888780;margin-bottom:2px}
+.stat-val{font-size:20px;font-weight:600;color:#2C2C2A}
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(10px);background:#2C2C2A;color:#fff;padding:10px 22px;border-radius:24px;font-size:14px;opacity:0;transition:all 0.3s;pointer-events:none;z-index:999;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.15)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.plus-toast{background:#3B6D11}
+.toast.minus-toast{background:#A32D2D}
+.rule-count{font-size:11px;background:#f1f0eb;color:#888780;border-radius:10px;padding:1px 7px;margin-left:auto}
+
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.hidden{display:none}
+.modal{background:#fff;border-radius:14px;padding:24px;width:100%;max-width:440px;box-shadow:0 8px 30px rgba(0,0,0,0.15)}
+.modal h3{font-size:16px;font-weight:600;margin-bottom:16px;color:#2C2C2A}
+.modal-field{margin-bottom:14px}
+.modal-field label{display:block;font-size:13px;font-weight:500;color:#5F5E5A;margin-bottom:4px}
+.modal-field input,.modal-field textarea{width:100%;padding:8px 12px;border:1px solid #e8e7e2;border-radius:8px;font-size:14px;outline:none;font-family:inherit;resize:vertical}
+.modal-field input:focus,.modal-field textarea:focus{border-color:#85B7EB}
+.modal-field textarea{min-height:60px}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.modal-btns button{padding:8px 20px;border-radius:8px;font-size:14px;cursor:pointer;border:1px solid #e8e7e2;background:#fff;color:#5F5E5A;transition:all 0.15s}
+.modal-btns .btn-primary{background:#185FA5;color:#fff;border-color:#185FA5}
+.modal-btns .btn-primary:hover{background:#0C447C}
+.modal-btns .btn-danger{background:#E24B4A;color:#fff;border-color:#E24B4A}
+.modal-btns .btn-danger:hover{background:#A32D2D}
+.export-btn{background:#fff;border:1px solid #d3d1c7;border-radius:8px;padding:6px 14px;font-size:13px;color:#5F5E5A;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:4px}
+.export-btn:hover{border-color:#BA7517;color:#BA7517}
+.export-menu{position:absolute;top:100%;right:0;margin-top:6px;background:#fff;border:1px solid #e8e7e2;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.1);z-index:100;min-width:160px;overflow:hidden;display:none}
+.export-menu.show{display:block}
+.export-menu-item{padding:10px 16px;font-size:13px;color:#2C2C2A;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 0.15s}
+.export-menu-item:hover{background:#f9f8f5}
+.export-menu-item span{color:#888780;font-size:11px;margin-left:auto}
+.chart-wrap{background:#fff;border:1px solid #e8e7e2;border-radius:12px;padding:16px;margin-bottom:16px}
+.chart-title{font-size:14px;font-weight:600;color:#2C2C2A;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.chart-container{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.chart-legend{display:flex;gap:16px;margin-top:12px;justify-content:center;flex-wrap:wrap}
+.chart-legend-item{display:flex;align-items:center;gap:5px;font-size:12px;color:#5F5E5A}
+.chart-legend-dot{width:10px;height:10px;border-radius:50%}
+.chart-empty{text-align:center;padding:30px;color:#888780;font-size:13px}
+
+/* 密码门样式 */
+#pwGate{position:fixed;top:0;left:0;width:100%;height:100%;background:#f5f4f0;z-index:99999;display:flex;align-items:center;justify-content:center}
+#pwGate.pw-hidden{display:none}
+.pw-box{background:#fff;border-radius:16px;padding:40px 32px;max-width:360px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.12);text-align:center}
+.pw-box h2{font-size:20px;font-weight:600;color:#2C2C2A;margin-bottom:8px}
+.pw-box p{font-size:13px;color:#888780;margin-bottom:24px;line-height:1.6}
+.pw-box input{width:100%;padding:10px 14px;font-size:16px;border:1px solid #d3d1c7;border-radius:8px;outline:none;transition:border-color 0.15s;letter-spacing:2px;text-align:center;box-sizing:border-box}
+.pw-box input:focus{border-color:#185FA5}
+.pw-box button{margin-top:16px;width:100%;padding:10px 0;font-size:15px;font-weight:500;background:#185FA5;color:#fff;border:none;border-radius:8px;cursor:pointer;transition:background 0.15s}
+.pw-box button:hover{background:#0C447C}
+.pw-box .pw-err{color:#A32D2D;font-size:12px;margin-top:10px;min-height:18px}
+
+</style></head>
+<body>
+<div id="pwGate">
+  <div class="pw-box">
+    <h2>🔒 积分奖惩表</h2>
+    <p>请输入授权密码才能使用<br>购买后请联系卖家获取密码</p>
+    <input id="pwInput" type="text" placeholder="请输入密码" maxlength="8" autocomplete="off">
+    <button onclick="checkPw()">确 认</button>
+    <div class="pw-err" id="pwErr"></div>
+  </div>
+</div>
+
+<div class="wrap" id="mainApp" style="display:none">
+  <div class="header">
+    <div class="title" id="titleArea" onclick="startEditTitle()">
+      <span class="title-icon">&#9733;</span><span id="titleText">小朋友</span>积分奖惩表
+      <span class="title-edit-hint">点击修改</span>
+    
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <button onclick="exportData()" style="padding:5px 12px;font-size:12px;border:1px solid #85B7EB;border-radius:6px;background:#F0F5FB;color:#185FA5;cursor:pointer">导出数据</button>
+    <button onclick="document.getElementById('importFileInput').click()" style="padding:5px 12px;font-size:12px;border:1px solid #85B7EB;border-radius:6px;background:#F0F5FB;color:#185FA5;cursor:pointer">导入数据</button>
+    <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(this)">
+  </div>
+</div>
+    <div id="titleEditRow" style="display:none;align-items:center;gap:8px">
+      <span class="title-icon">&#9733;</span><input class="title-input" id="titleInput" type="text" maxlength="20" placeholder="输入小朋友的名字" onkeydown="if(event.key==='Enter')saveTitle();if(event.key==='Escape')cancelEditTitle()">
+      <span style="font-size:14px;color:#5F5E5A">积分奖惩表</span>
+      <button class="edit-toggle" style="padding:4px 12px;font-size:12px" onclick="saveTitle()">&#10003; 保存</button>
+      <button class="edit-toggle" style="padding:4px 12px;font-size:12px" onclick="cancelEditTitle()">取消</button>
+    </div>
+    <div class="header-right">
+      <div class="score-board">
+        <div class="score-card"><div class="score-label">今日得分</div><div class="score-val plus" id="todayScore">+0</div></div>
+        <div class="score-card"><div class="score-label">今日扣分</div><div class="score-val minus" id="todayMinus">-0</div></div>
+        <div class="score-card"><div class="score-label">本月累计</div><div class="score-val total" id="totalScore">0</div></div>
+      </div>
+      <button class="edit-toggle" id="editToggle" onclick="toggleEditMode()">&#9998; 编辑规则</button>
+      <div style="position:relative;display:inline-block">
+        <button class="export-btn" onclick="toggleExportMenu()">&#11015; 导出</button>
+        <div class="export-menu" id="exportMenu">
+          <div class="export-menu-item" onclick="exportCSV()">导出 CSV <span>表格通用</span></div>
+          <div class="export-menu-item" onclick="exportExcel()">导出 Excel <span>.xlsx</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-wrap" style="margin-bottom:20px">
+    <div class="chart-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span>&#128200; 每日积分趋势</span>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <input type="date" id="chartDateFrom" onchange="renderChart()" style="font-size:12px;padding:3px 8px;border:1px solid #e8e7e2;border-radius:6px;outline:none">
+        <span style="font-size:13px;color:#888780">至</span>
+        <input type="date" id="chartDateTo" max="" onchange="renderChart()" style="font-size:12px;padding:3px 8px;border:1px solid #e8e7e2;border-radius:6px;outline:none">
+        <div class="chart-legend" id="trendChartLegend" style="display:none;margin:0">
+          <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#185FA5"></div>当日积分</div>
+          <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#BA7517"></div>零分基准</div>
+        </div>
+      </div>
+    </div>
+    <div class="chart-container" id="trendChartContainer">
+      <div class="chart-empty" id="trendChartEmpty">暂无数据，记录积分后即可查看趋势</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('record',this)">记录积分</button>
+    <button class="tab" onclick="switchTab('log',this)">积分明细</button>
+    <button class="tab" onclick="switchTab('redeem',this)">兑换奖励</button>
+  </div>
+
+  <div id="tab-record" class="panel active">
+    <div class="date-row">
+      <label>记录日期：</label>
+      <input type="date" id="curDate" onchange="updateScores()">
+      <span style="font-size:12px;color:#888780">点击规则条目即可记录</span>
+    </div>
+    <div class="rules-grid">
+      <div class="rule-group reward">
+        <div class="rule-group-title">&#10003; 奖励得分 <span class="rule-count" id="rewardCount">0条</span></div>
+        <div id="rewardRulesList"></div>
+        <div class="add-rule-btn" onclick="openRuleModal('reward')">+ 添加奖励规则</div>
+      </div>
+      <div class="rule-group penalty">
+        <div class="rule-group-title">&#10007; 惩罚扣分 <span class="rule-count" id="penaltyCount">0条</span></div>
+        <div id="penaltyRulesList"></div>
+        <div class="add-rule-btn" onclick="openRuleModal('penalty')">+ 添加扣分规则</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-log" class="panel">
+    <div class="date-row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <label>查看月份：</label>
+        <input type="month" id="filterMonth" onchange="renderLog()">
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button id="undoBtn" onclick="undo()" disabled style="padding:4px 12px;font-size:12px;border:1px solid #85B7EB;border-radius:6px;background:#F0F5FB;color:#185FA5;cursor:pointer;opacity:0.5">恢复上次删除</button>
+        <button onclick="clearMonthRecords()" style="padding:4px 12px;font-size:12px;border:1px solid #D8C5B5;border-radius:6px;background:#FFF8F0;color:#7A4A1A;cursor:pointer">当月清零</button>
+        <button onclick="clearAllRecords()" style="padding:4px 12px;font-size:12px;border:1px solid #E5A5A5;border-radius:6px;background:#FFF5F5;color:#A32D2D;cursor:pointer">全部清零（含兑奖）</button>
+      </div>
+    </div>
+    <div class="month-stats" id="monthStats"></div>
+    <table class="log-table">
+      <thead>
+        <tr><th>日期</th><th>事项</th><th>分值</th><th>操作</th></tr>
+      </thead>
+      <tbody id="logBody"></tbody>
+    </table>
+    <div id="logEmpty" class="empty-hint"><span class="empty-icon">&#128203;</span><br>暂无记录，快去记录积分吧！</div>
+  </div>
+
+  <div id="tab-redeem" class="panel">
+    <p class="click-hint" style="margin-bottom:16px">累计积分达到目标即可兑换奖励，兑换后自动扣除对应积分</p>
+    <div class="redeem-list" id="redeemList"></div>
+    <div class="add-reward-btn" onclick="openRewardModal()" style="margin-top:14px">+ 添加兑换奖励</div>
+    <div class="redeem-history" id="redeemHistorySection" style="display:none">
+      <div class="redeem-history-title">&#127942; 兑换记录</div>
+      <table class="history-table">
+        <thead><tr><th>日期</th><th>兑换内容</th><th>消耗积分</th><th style="width:40px"></th></tr></thead>
+        <tbody id="redeemHistoryBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay hidden" id="confirmModal">
+  <div class="modal" style="max-width:340px;text-align:center">
+    <div style="font-size:32px;margin-bottom:10px">⚠️</div>
+    <div id="confirmMsg" style="font-size:14px;color:#2C2C2A;line-height:1.6;margin-bottom:20px"></div>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button onclick="confirmCallback(false)" style="padding:8px 24px;border-radius:8px;font-size:14px;cursor:pointer;border:1px solid #e8e7e2;background:#fff;color:#5F5E5A">取消</button>
+      <button onclick="confirmCallback(true)" style="padding:8px 24px;border-radius:8px;font-size:14px;cursor:pointer;border:1px solid #E24B4A;background:#E24B4A;color:#fff">确认清除</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="ruleModal">
+  <div class="modal">
+    <h3 id="ruleModalTitle">添加规则</h3>
+    <div class="modal-field">
+      <label>规则内容</label>
+      <input type="text" id="ruleModalName" placeholder="例如：完成学校学习">
+    </div>
+    <div class="modal-field">
+      <label>说明（可选，积分明细中显示）</label>
+      <input type="text" id="ruleModalDesc" placeholder="例如：按时完成当天学校布置的全部学习任务" maxlength="50">
+    </div>
+    <div class="modal-field">
+      <label>分值（正数为加分，负数为扣分）</label>
+      <input type="number" id="ruleModalPts" step="0.5" placeholder="例如：1 或 -1">
+    </div>
+    <div class="modal-field">
+      <label>分类标签（积分明细中显示的分类）</label>
+      <input type="text" id="ruleModalTag" placeholder="例如：学习、习惯、情绪等" maxlength="6">
+    </div>
+    <div class="modal-field">
+      <label>标签颜色（点击选择）</label>
+      <div id="ruleTagColorOptions" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"></div>
+    </div>
+    <div class="modal-btns">
+      <button onclick="closeModal('ruleModal')">取消</button>
+      <button class="btn-danger" id="ruleModalDelete" onclick="deleteRuleFromModal()" style="margin-left:auto">删除</button>
+      <button class="btn-primary" onclick="saveRule()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="rewardModal">
+  <div class="modal">
+    <h3 id="rewardModalTitle">添加兑换奖励</h3>
+    <div class="modal-field">
+      <label>奖励名称</label>
+      <input type="text" id="rewardModalTitleInput" placeholder="例如：游戏币兑换（最高30元）">
+    </div>
+    <div class="modal-field">
+      <label>所需积分</label>
+      <input type="number" id="rewardModalScore" placeholder="例如：30">
+    </div>
+    <div class="modal-field">
+      <label>奖励说明</label>
+      <textarea id="rewardModalDesc" placeholder="详细描述奖励内容和限制"></textarea>
+    </div>
+    <div class="modal-field">
+      <label>每月兑换上限（99=不限）</label>
+      <input type="number" id="rewardModalMax" value="99">
+    </div>
+    <div class="modal-field">
+      <label>标签文字（兑换记录中显示）</label>
+      <input type="text" id="rewardModalBadgeLabel" placeholder="例如：游戏币、看电视、奖励等" maxlength="8">
+    </div>
+    <div class="modal-field">
+      <label>标签颜色（点击选择）</label>
+      <div id="badgeColorOptions" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"></div>
+    </div>
+    <div class="modal-btns">
+      <button onclick="closeModal('rewardModal')">取消</button>
+      <button class="btn-danger" id="rewardModalDelete" onclick="deleteRewardFromModal()" style="margin-left:auto">删除</button>
+      <button class="btn-primary" onclick="saveReward()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+// ========== 密码验证 ==========
+var _pwList = ['QVFLNVNGTDM=','S1BUTDNTRTg=','RDNOTVQ2UUM=','MkQ0SlM0MkM=','QUtGVDNVNks=','VzdOSFlVOE0=','TlozRzYyVEs=','VUdDNDlKR1g=','Rk5IWDNDN1U=','VkYzRVlaUUw=','VFZHWUFZUUc=','RUE5OFpZNko=','OTZLUkU5Q0o=','NVFLTFVMQ1Y=','Q0paVjZaTFQ=','V0U3QVRLWDY=','M0Y1OEYzSDI=','NTZNOEVWUkI=','VjRRVzJZWTg=','Mkc2M1VWRkw=','UUJIQlY4NTQ=','VEQyOVQyR0I=','WEhZUVNROUE=','UkNSVlBFRU0=','RFlSSE5GS0Y=','REM0V1FZS0M=','TUwzTVhVQVI=','WjhLWFlOV1A=','UVhBUEU5OVU=','RkxIQlhRQ0I=','UUREQ1hZN0Y=','Uk5VS002M1A=','NkVYNlozV0o=','QU01VERCQUw=','RjZCVlFMQ1Q=','QllVUUpYWUI=','WkVaMjZFNjY=','SlVRVjhUREo=','VkNHWVg5R1o=','TTZLU1VFS0Q=','VU5VNVNZUTQ=','VFZCR1k5VFA=','TVpTVFJXU0M=','QUpNNzQ0R0g=','VFEyREJTMkQ=','OUtSTjhKNUw=','SkxDOFJEUzY=','U1RVRkJVMlg=','UDhLWUs2OVQ=','VzIyUDZTOVE=','NU5UMzVDQ1Q=','OEZGWEFOVTQ=','MkpDNlM1VVY=','WVI3MlBXNk4=','VjlLS0s2OVc=','M0tTRk1MUjQ=','UVhaTkxCVUs=','OUZHTVhRRkI=','RDQ3OVA1WFg=','Q1JSTFIyMzg=','WDhRWFBKRk0=','Sk5ETTJDNTU=','Rks3TVo2WFk=','N0NRM1A1Sks=','WUFVRFVSQ0I=','RlRZUEdYWjU=','S01FM1U0QUY=','VlREQTI3TFg=','OFJXRFlaTk4=','SzVMTjJQSlE=','VVdVSkxIOTQ=','WldHVlVDRVk=','VVFLWVlKS0U=','NFBXTEJINkg=','UVVSNFo3OUw=','NTlONERWTjk=','VDROR1JGNkI=','Tjk2SFlORUM=','SkQ1TVRTSzc=','TVdIWldDN1E=','MllGUjg3M1A=','U0FTTERKMlA=','VjdUWDIzMkg=','SFlLNllNV1Q=','SzNRNkpTQ1U=','OEREOVRaVVI=','MlFTMlBOUkY=','MlZGWk44Rjk=','UjhMQVZDVEQ=','SjhQVkpKSzc=','OUNZUFRRNUE=','UUxYRkw5WjM=','VEVINkI1WEE=','VTQ1RURYVlg=','VVI1VkpQMlE=','OFdTNlFROUo=','N1MzQTk4NDg=','UEZXSlAzVzk=','UkdFNFBUOE0=','Q1ZLTTNOTDc=','OUY5OFc1UDM=','RFdES1AyOE0=','VFBXM01NRUI=','S1lIRlE5NEQ=','TjdXRVBOQU0=','R1ZLWkdCTEY=','VVdDODdQRDQ=','NlVOVVk3NU0=','R1RCV1Q1UDk=','MlhRRTZLSlY=','UVVaNzZBUko=','NVFLUEE5Mzc=','UVo5SFBNRks=','TUdLSFBWNkw=','OVlFWUxMUkw=','QjNSM1YyUk4=','TFZHWldSREY=','WlpCVjYzNEI=','Q05XN0hHU0E=','NVY2TTM5M0s=','Sk1FWEIyM1E=','NlVTWkQzUjg=','Vkc5UU1DQVg=','TkUzSkRIMzQ=','OUFBTTNHUzM=','UlVOVExFWTM=','TVE4UTJOS1g=','TUs1UFkzUVo=','NkhRWTJTOU0=','SlBXTVdGQUQ=','R1laWTg0U1M=','NVdTM0FYSjc=','VUZGRUYzU1U=','SzdCRllBQUM=','NUZYRFhORU0=','ODI2N0NXM0w=','ODNGMlJINlk=','WFlTTFlHRzc=','TlpDUUNCWlg=','SjlXOUVNSjc=','VkRYRkdMV1Q=','WFNKOFpORTI=','SzhQTTQ5Qlo=','RDVON01TVDY=','UUxKWExRQUg=','RDVESFRETlQ=','VE41NjZUSDc=','NUNXRDdYWkM=','U0VZQjhDWTU=','NDVISllaRlA=','UVk0VUw0Nlo=','MzY0WEZSRkg=','VUpFRUNLVFg=','RktCVEtSUE0=','REdOUVFBNkQ=','VFY3V1VUN0U=','VVpZVTZaNlM=','SkhSUVBRWkE=','M0JaVVVYVFU=','NEVONjI4M0c=','OUg5M1MyM0E=','Tk5ENDhTUE0=','UUFXOTY4REM=','TlpRRjVNOVU=','U1hMUlg2WVE=','SFJDNzVFQ1U=','MlFVMlNOMlo=','WUs3Qk1IVko=','V1RZSjRDWlQ=','TDNaMzY3REg=','M0FCQTk2R0s=','N1JTRjVBWkE=','UkJSVVRIVUI=','SkdIVU5LRUY=','Q0s4UlBIVEM=','SFE4S0E4NTk=','UkFCSkRVR1U=','WkxOTUdOTVk=','SjJMSjhQUDk=','NDg4TEFLU00=','QlNWSjJEVjk=','R01EQUVMSEE=','TFlVRzNFV1Q=','VERCVzdFSlc=','WFJQR1pUNU0=','UU1GMlFaRlU=','RUtNWURKVlU=','U1VWNDhONkw=','V1Y3U1c1VlY=','NU5IVTI5Ujk=','Nkg4WlhaMkc=','RFVBRjdMNU4=','NldFUTg1Rzk=','M0dKNkRERUg=','UVBRVTRHWEY=','RTM4Nk1KOTg=','NkhWUlEyVzc=','RlhVOU43REQ=','QVM1VDlBR1I=','WkRVWjczUUg='];
+var _pwKey = 'kpts_pw_ok';
+
+
+
+
+
+// ===== 设备限制配置（请替换为你的 GAS 部署 URL）=====
+// =======================================================
+
+
+
+function doUnlock(val) {
+  localStorage.setItem(_pwKey, '1');
+  document.getElementById('pwGate').classList.add('pw-hidden');
+  document.getElementById('mainApp').style.display = '';
+  if (typeof init === 'function') init();
+}
+
+(function(){
+  var gate = document.getElementById('pwGate');
+  var main = document.getElementById('mainApp');
+  // 已验证过
+  if (localStorage.getItem(_pwKey) === '1') {
+    gate.classList.add('pw-hidden');
+    main.style.display = '';
+    return;
+  }
+  // 回车键提交
+  var input = document.getElementById('pwInput');
+  if (input) {
+    input.addEventListener('keydown', function(e){ if(e.key==='Enter') checkPw(); });
+    setTimeout(function(){ input.focus(); }, 100);
+  }
+})();
+
+function checkPw() {
+  var val = (document.getElementById('pwInput')||{}).value.trim().toUpperCase();
+  var err = document.getElementById('pwErr');
+  if (!val) { err.textContent = '请输入密码'; return; }
+  var valEnc = btoa(val.split('').reverse().join(''));
+  var localOk = _pwList.indexOf(valEnc) > -1;
+  if (!localOk) { err.textContent = '密码错误，请核对后重试'; return; }
+  localStorage.setItem(_pwKey, '1');
+  document.getElementById('pwGate').classList.add('pw-hidden');
+  document.getElementById('mainApp').style.display = '';
+  if (typeof init === 'function') init();
+}
+
+// ==================================
+
+
+var badgeColorList = [
+  { cls: 'c0', bg: '#EAF3DE', color: '#27500A' },
+  { cls: 'c1', bg: '#FAEEDA', color: '#854F0B' },
+  { cls: 'c2', bg: '#E6F1FB', color: '#185FA5' },
+  { cls: 'c3', bg: '#EEEDFE', color: '#534AB7' },
+  { cls: 'c4', bg: '#FCEBEB', color: '#791F1F' },
+  { cls: 'c5', bg: '#FDE8D0', color: '#9A3B00' },
+  { cls: 'c6', bg: '#DFF5EE', color: '#0D5C45' },
+  { cls: 'c7', bg: '#FFF8D6', color: '#7A6B00' },
+  { cls: 'c8', bg: '#F5E6F7', color: '#6B1F7A' },
+  { cls: 'c9', bg: '#E8E8E8', color: '#3C3C3C' }
+];
+var currentBadgeColor = 'c1';
+var currentRuleTagColor = 'c0';
+
+function initBadgeColorPicker() {
+  var container = document.getElementById('badgeColorOptions');
+  if (!container) return;
+  var html = '';
+  for (var i = 0; i < badgeColorList.length; i++) {
+    var opt = badgeColorList[i];
+    var isSelected = (opt.cls === currentBadgeColor);
+    html += '<span onclick="selectBadgeColor(\'' + opt.cls + '\')" style="display:inline-block;width:30px;height:30px;background:' + opt.bg + ';border-radius:8px;border:3px solid ' + (isSelected ? '#185FA5' : 'transparent') + ';cursor:pointer;box-sizing:border-box;margin:2px;transition:border-color 0.15s" title="标签颜色' + (i + 1) + '"></span>';
+  }
+  container.innerHTML = html;
+}
+
+function selectBadgeColor(cls) {
+  currentBadgeColor = cls;
+  initBadgeColorPicker();
+}
+
+function initRuleTagColorPicker() {
+  var container = document.getElementById('ruleTagColorOptions');
+  if (!container) return;
+  var html = '';
+  for (var i = 0; i < badgeColorList.length; i++) {
+    var opt = badgeColorList[i];
+    var isSelected = (opt.cls === currentRuleTagColor);
+    html += '<span onclick="selectRuleTagColor(\'' + opt.cls + '\')" style="display:inline-block;width:30px;height:30px;background:' + opt.bg + ';border-radius:8px;border:3px solid ' + (isSelected ? '#185FA5' : 'transparent') + ';cursor:pointer;box-sizing:border-box;margin:2px;transition:border-color 0.15s" title="标签颜色' + (i + 1) + '"></span>';
+  }
+  container.innerHTML = html;
+}
+
+function selectRuleTagColor(cls) {
+  currentRuleTagColor = cls;
+  initRuleTagColorPicker();
+}
+
+var DEFAULT_REWARDS = [
+  { id: 'rw1', score: 30, title: '游戏币兑换（最高30元）', desc: '积满30分可兑换游戏币，每月最多兑换一次，单次不超过30元。', monthlyMax: 1, badge: 'game', badgeLabel: '游戏币' },
+  { id: 'rw2', score: 60, title: '电视不限时（周一至周四选一天）', desc: '积满60分，周一至周四选一天，电视随便看不限时间。', monthlyMax: 99, badge: 'tv', badgeLabel: '电视' },
+  { id: 'rw3', score: 100, title: '游戏不限时（周末选一天）', desc: '积满100分，周末选一天，游戏随便玩不限时间！', monthlyMax: 99, badge: 'play', badgeLabel: '游戏' }
+];
+
+var DEFAULT_REWARD_RULES = [
+  { id: 'rr1', name: '完成学校学习', pts: 1, tag: '学习', tagColor: 'c2', desc: '按时完成当天学校布置的全部学习任务' },
+  { id: 'rr2', name: '阅读半小时+叫叫+跟着书本去旅行', pts: 0.5, tag: '阅读', tagColor: 'c6', desc: '完成阅读打卡及跟着书本去旅行学习' },
+  { id: 'rr3', name: '数学作业', pts: 0.5, tag: '学习', tagColor: 'c2', desc: '独立完成数学作业，正确率达标' },
+  { id: 'rr4', name: '英语单词/闯关/PK+英语打卡', pts: 0.5, tag: '学习', tagColor: 'c2', desc: '完成英语学习打卡、单词闯关或PK' },
+  { id: 'rr5', name: '培训班英语作业（抄写+拼读）', pts: 0.5, tag: '学习', tagColor: 'c2', desc: '完成培训班英语课后作业' },
+  { id: 'rr6', name: '街舞打卡', pts: 0.5, tag: '运动', tagColor: 'c5', desc: '完成街舞练习或课程打卡' },
+  { id: 'rr7', name: '自己的事情自己做（整理书包/洗澡穿衣/吃饭等）', pts: 0.5, tag: '习惯', tagColor: 'c0', desc: '独立完成个人日常自理事务' },
+  { id: 'rr8', name: '妈妈安排的其他学习任务', pts: 0.5, tag: '学习', tagColor: 'c2', desc: '完成妈妈额外安排的学习任务' },
+  { id: 'rr9', name: '主动帮忙做家务（扫地/收碗/整理等）', pts: 0.5, tag: '家务', tagColor: 'c7', desc: '主动承担力所能及的家务劳动' },
+  { id: 'rr10', name: '保持好情绪，不发脾气无哭闹', pts: 0.5, tag: '情绪', tagColor: 'c3', desc: '全天保持好情绪，不无故发脾气或哭闹' },
+  { id: 'rr11', name: '按时睡觉不拖延（21:30前上床）', pts: 0.5, tag: '习惯', tagColor: 'c0', desc: '在规定时间内上床准备睡觉' },
+  { id: 'rr12', name: '超级表现/进步奖励（妈妈特别加分）', pts: 1, tag: '特别', tagColor: 'c4', desc: '表现突出或有明显进步时妈妈特别加分' }
+];
+
+var DEFAULT_PENALTY_RULES = [
+  { id: 'pr1', name: '写作业拖拉、小动作多（提醒3次）', pts: -1, tag: '拖拉', tagColor: 'c5', desc: '经3次提醒后仍拖拉、不专注写作业' },
+  { id: 'pr2', name: '妈妈/奶奶安排的事情喊不动（提醒3次）', pts: -1, tag: '态度', tagColor: 'c3', desc: '经3次提醒后仍不听从大人安排' },
+  { id: 'pr3', name: '无故发脾气、哭闹耍赖', pts: -0.5, tag: '情绪', tagColor: 'c3', desc: '无正当理由发脾气、哭闹或耍赖' },
+  { id: 'pr4', name: '说谎、推卸责任不承认错误', pts: -1, tag: '行为', tagColor: 'c4', desc: '撒谎或推卸责任、不愿承认错误' },
+  { id: 'pr5', name: '不爱惜东西、乱扔乱放不整理', pts: -0.5, tag: '习惯', tagColor: 'c0', desc: '不爱护物品、乱扔乱放不收拾整理' },
+  { id: 'pr6', name: '玩手机/平板超时不肯放（提醒3次）', pts: -1, tag: '规矩', tagColor: 'c9', desc: '使用电子产品超过规定时间，经3次提醒仍不放下' },
+  { id: 'pr7', name: '吃饭拖拉超过30分钟', pts: -0.5, tag: '习惯', tagColor: 'c0', desc: '吃饭时间超过30分钟仍未吃完' },
+  { id: 'pr8', name: '睡觉磨蹭超过规定时间不入睡', pts: -0.5, tag: '习惯', tagColor: 'c0', desc: '超过规定睡觉时间仍未上床入睡' }
+];
+
+var rewardRules = load('kidRewardRules', DEFAULT_REWARD_RULES);
+var penaltyRules = load('kidPenaltyRules', DEFAULT_PENALTY_RULES);
+// 补全旧规则缺失的标签数据
+(function() {
+  var u1 = false, u2 = false;
+  for (var i = 0; i < rewardRules.length; i++) {
+    if (!rewardRules[i].tag) { rewardRules[i].tag = '其他'; rewardRules[i].tagColor = 'c9'; rewardRules[i].desc = ''; u1 = true; }
+  }
+  for (var i = 0; i < penaltyRules.length; i++) {
+    if (!penaltyRules[i].tag) { penaltyRules[i].tag = '其他'; penaltyRules[i].tagColor = 'c9'; penaltyRules[i].desc = ''; u2 = true; }
+  }
+  if (u1) save('kidRewardRules', rewardRules);
+  if (u2) save('kidPenaltyRules', penaltyRules);
+})();
+var redeemRewards = load('kidRedeemRewards', DEFAULT_REWARDS);
+var records = load('kidPointsRecords', []);
+// 补全旧积分记录缺失的标签数据
+(function() {
+  var updated = false;
+  var allRules = rewardRules.concat(penaltyRules);
+  for (var i = 0; i < records.length; i++) {
+    var r = records[i];
+    if (!r.tag) {
+      var match = allRules.find(function(rule) { return rule.name === r.name; });
+      r.tag = match ? (match.tag || '') : '';
+      r.tagColor = match ? (match.tagColor || 'c0') : 'c0';
+      r.desc = match ? (match.desc || '') : '';
+      updated = true;
+    }
+  }
+  if (updated) save('kidPointsRecords', records);
+})();
+var redeemHistory = load('kidRedeemHistory', []);
+// 补全旧记录缺失的标签数据
+(function() {
+  var updated = false;
+  for (var i = 0; i < redeemHistory.length; i++) {
+    var h = redeemHistory[i];
+    if (!h.badge || !h.badgeLabel) {
+      var rw = redeemRewards.find(function(r) { return r.id === h.rwId; });
+      if (!h.badge) h.badge = rw ? (rw.badge || 'c1') : 'c1';
+      if (!h.badgeLabel) h.badgeLabel = rw ? (rw.badgeLabel || '奖励') : '奖励';
+      updated = true;
+    }
+  }
+  if (updated) save('kidRedeemHistory', redeemHistory);
+})();
+var editMode = false;
+var currentModalType = '';
+var currentEditId = '';
+var kidName = localStorage.getItem('kidName') || '';
+var undoStack = []; // 最多保存3次操作前的状态快照
+
+function loadTitle() {
+  var text = kidName || '小朋友';
+  document.getElementById('titleText').textContent = text;
+  document.title = text + '积分奖惩表';
+}
+
+function startEditTitle() {
+  document.getElementById('titleArea').style.display = 'none';
+  document.getElementById('titleEditRow').style.display = 'flex';
+  var input = document.getElementById('titleInput');
+  input.value = kidName || '';
+  input.focus();
+  input.select();
+}
+
+function saveTitle() {
+  var val = document.getElementById('titleInput').value.trim();
+  kidName = val;
+  localStorage.setItem('kidName', kidName);
+  document.getElementById('titleEditRow').style.display = 'none';
+  document.getElementById('titleArea').style.display = 'flex';
+  loadTitle();
+  showToast(kidName ? '名字已保存为「' + kidName + '」' : '已恢复默认名字', 'plus-toast');
+}
+
+function cancelEditTitle() {
+  document.getElementById('titleEditRow').style.display = 'none';
+  document.getElementById('titleArea').style.display = 'flex';
+}
+
+function load(key, def) {
+  try { var d = JSON.parse(localStorage.getItem(key)); if (Array.isArray(d) && d.length > 0) return d; } catch(e) {}
+  return JSON.parse(JSON.stringify(def));
+}
+function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function todayStr() {
+  var d = new Date();
+  var y = d.getFullYear();
+  var m = d.getMonth() + 1;
+  var day = d.getDate();
+  return y + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
+}
+function monthStr() {
+  var d = new Date();
+  var y = d.getFullYear();
+  var m = d.getMonth() + 1;
+  return y + '-' + (m < 10 ? '0' : '') + m;
+}
+// Format any Date to local YYYY-MM-DD string
+function localDateStr(d) {
+  var y = d.getFullYear();
+  var m = d.getMonth() + 1;
+  var day = d.getDate();
+  return y + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
+}
+function fmtNum(n) { return n % 1 === 0 ? String(n) : n.toFixed(1); }
+
+function init() { if (document.getElementById("mainApp") && document.getElementById("mainApp").style.display==="none") return; 
+  document.getElementById('curDate').value = todayStr();
+  document.getElementById('filterMonth').value = monthStr();
+  loadTitle();
+  save('kidRewardRules', rewardRules);
+  save('kidPenaltyRules', penaltyRules);
+  save('kidRedeemRewards', redeemRewards);
+  renderRules();
+  updateScores();
+  // Default chart range: last 7 days, cap at today
+  var now = new Date();
+  var today = todayStr();
+  var defaultTo = today;
+  var fromDate = new Date(now);
+  fromDate.setDate(fromDate.getDate() - 6);
+  var defaultFrom = localDateStr(fromDate);
+  document.getElementById('chartDateFrom').value = defaultFrom;
+  document.getElementById('chartDateFrom').setAttribute('max', today);
+  document.getElementById('chartDateTo').value = defaultTo;
+  document.getElementById('chartDateTo').setAttribute('max', today);
+  renderChart();
+  renderLog();
+  renderRedeem();
+  initBadgeColorPicker();
+  updateUndoButton();
+}
+
+function toggleEditMode() {
+  editMode = !editMode;
+  document.body.classList.toggle('edit-mode', editMode);
+  var btn = document.getElementById('editToggle');
+  btn.classList.toggle('active', editMode);
+  btn.innerHTML = editMode ? '&#10003; 完成编辑' : '&#9998; 编辑规则';
+  renderRules();
+  renderRedeem();
+}
+
+function renderRules() {
+  var rHtml = '';
+  for (var i = 0; i < rewardRules.length; i++) {
+    var r = rewardRules[i];
+    var descHtml = r.desc ? '<div style="font-size:11px;color:#888780;margin-top:2px;line-height:1.4">' + esc(r.desc) + '</div>' : '';
+    var tagHtml = r.tag ? '<span class="history-badge ' + (r.tagColor || 'c0') + '" style="font-size:10px;margin-right:4px">' + esc(r.tag) + '</span>' : '';
+    rHtml += '<div class="rule-item clickable" onclick="addScore(\'' + esc(r.name) + '\',' + r.pts + ',\'' + esc(r.tag || '') + '\',\'' + (r.tagColor || 'c0') + '\',\'' + esc(r.desc || '') + '\')">' +
+      '<div style="flex:1;min-width:0">' +
+        '<span class="rule-text">' + tagHtml + esc(r.name) + '</span>' +
+        descHtml +
+      '</div>' +
+      '<span class="rule-pts p">+' + fmtNum(r.pts) + '分</span>' +
+      '<div class="rule-actions"><button class="icon-btn" onclick="event.stopPropagation();openRuleModal(\'reward\',\'' + r.id + '\')" title="编辑">&#9998;</button><button class="icon-btn del" onclick="event.stopPropagation();deleteRuleDirect(\'reward\',\'' + r.id + '\')" title="删除">&#10005;</button></div>' +
+    '</div>';
+  }
+  document.getElementById('rewardRulesList').innerHTML = rHtml;
+  document.getElementById('rewardCount').textContent = rewardRules.length + '条';
+
+  var pHtml = '';
+  for (var i = 0; i < penaltyRules.length; i++) {
+    var r = penaltyRules[i];
+    var descHtml = r.desc ? '<div style="font-size:11px;color:#888780;margin-top:2px;line-height:1.4">' + esc(r.desc) + '</div>' : '';
+    var tagHtml = r.tag ? '<span class="history-badge ' + (r.tagColor || 'c0') + '" style="font-size:10px;margin-right:4px">' + esc(r.tag) + '</span>' : '';
+    pHtml += '<div class="rule-item clickable" onclick="addScore(\'' + esc(r.name) + '\',' + r.pts + ',\'' + esc(r.tag || '') + '\',\'' + (r.tagColor || 'c0') + '\',\'' + esc(r.desc || '') + '\')">' +
+      '<div style="flex:1;min-width:0">' +
+        '<span class="rule-text">' + tagHtml + esc(r.name) + '</span>' +
+        descHtml +
+      '</div>' +
+      '<span class="rule-pts m">' + fmtNum(r.pts) + '分</span>' +
+      '<div class="rule-actions"><button class="icon-btn" onclick="event.stopPropagation();openRuleModal(\'penalty\',\'' + r.id + '\')" title="编辑">&#9998;</button><button class="icon-btn del" onclick="event.stopPropagation();deleteRuleDirect(\'penalty\',\'' + r.id + '\')" title="删除">&#10005;</button></div>' +
+    '</div>';
+  }
+  document.getElementById('penaltyRulesList').innerHTML = pHtml;
+  document.getElementById('penaltyCount').textContent = penaltyRules.length + '条';
+}
+
+function esc(s) { return s.replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+
+function openRuleModal(type, id) {
+  currentModalType = type;
+  currentEditId = id || '';
+  var arr = type === 'reward' ? rewardRules : penaltyRules;
+  var item = id ? arr.find(function(r) { return r.id === id; }) : null;
+  document.getElementById('ruleModalTitle').textContent = item ? '编辑规则' : '添加' + (type === 'reward' ? '奖励' : '扣分') + '规则';
+  document.getElementById('ruleModalName').value = item ? item.name : '';
+  document.getElementById('ruleModalDesc').value = item ? (item.desc || '') : '';
+  document.getElementById('ruleModalPts').value = item ? item.pts : (type === 'reward' ? '1' : '-1');
+  document.getElementById('ruleModalTag').value = item ? (item.tag || '') : '';
+  currentRuleTagColor = item ? (item.tagColor || 'c0') : 'c0';
+  initRuleTagColorPicker();
+  document.getElementById('ruleModalDelete').style.display = item ? 'inline-block' : 'none';
+  document.getElementById('ruleModal').classList.remove('hidden');
+}
+
+function saveRule() {
+  var name = document.getElementById('ruleModalName').value.trim();
+  var desc = document.getElementById('ruleModalDesc').value.trim();
+  var pts = parseFloat(document.getElementById('ruleModalPts').value);
+  var tag = document.getElementById('ruleModalTag').value.trim();
+  var tagColor = currentRuleTagColor;
+  if (!name) { showToast('请输入规则内容', 'minus-toast'); return; }
+  if (isNaN(pts) || pts === 0) { showToast('请输入有效的分值', 'minus-toast'); return; }
+  if (!tag) tag = '其他';
+  var arr = currentModalType === 'reward' ? rewardRules : penaltyRules;
+  if (currentEditId) {
+    var item = arr.find(function(r) { return r.id === currentEditId; });
+    if (item) { item.name = name; item.desc = desc; item.pts = pts; item.tag = tag; item.tagColor = tagColor; }
+  } else {
+    arr.push({ id: uid(), name: name, desc: desc, pts: pts, tag: tag, tagColor: tagColor });
+  }
+  save(currentModalType === 'reward' ? 'kidRewardRules' : 'kidPenaltyRules', arr);
+  closeModal('ruleModal');
+  renderRules();
+  showToast('规则已保存', 'plus-toast');
+}
+
+function deleteRuleFromModal() {
+  showConfirm('确定删除这条规则吗？', function(ok) {
+    if (!ok) return;
+    var arr = currentModalType === 'reward' ? rewardRules : penaltyRules;
+    var idx = arr.findIndex(function(r) { return r.id === currentEditId; });
+    if (idx > -1) arr.splice(idx, 1);
+    save(currentModalType === 'reward' ? 'kidRewardRules' : 'kidPenaltyRules', arr);
+    renderRules();
+    closeModal('ruleModal');
+    showToast('规则已删除', 'minus-toast');
+  });
+}
+
+function deleteRuleDirect(type, id) {
+  showConfirm('确定删除这条规则吗？', function(ok) {
+    if (!ok) return;
+    var arr = type === 'reward' ? rewardRules : penaltyRules;
+    var idx = arr.findIndex(function(r) { return r.id === id; });
+    if (idx > -1) arr.splice(idx, 1);
+    save(type === 'reward' ? 'kidRewardRules' : 'kidPenaltyRules', arr);
+    renderRules();
+    showToast('规则已删除', 'minus-toast');
+  });
+}
+
+function openRewardModal(id) {
+  currentEditId = id || '';
+  var item = id ? redeemRewards.find(function(r) { return r.id === id; }) : null;
+  document.getElementById('rewardModalTitle').textContent = item ? '编辑兑换奖励' : '添加兑换奖励';
+  document.getElementById('rewardModalTitleInput').value = item ? item.title : '';
+  document.getElementById('rewardModalScore').value = item ? item.score : '';
+  document.getElementById('rewardModalDesc').value = item ? item.desc : '';
+  document.getElementById('rewardModalMax').value = item ? item.monthlyMax : 99;
+  document.getElementById('rewardModalBadgeLabel').value = item ? (item.badgeLabel || '') : '';
+  // Set badge color
+  currentBadgeColor = item ? (item.badge || 'c1') : 'c1';
+  initBadgeColorPicker();
+  document.getElementById('rewardModalDelete').style.display = item ? 'inline-block' : 'none';
+  document.getElementById('rewardModal').classList.remove('hidden');
+}
+
+function saveReward() {
+  var title = document.getElementById('rewardModalTitleInput').value.trim();
+  var score = parseInt(document.getElementById('rewardModalScore').value);
+  var desc = document.getElementById('rewardModalDesc').value.trim();
+  var max = parseInt(document.getElementById('rewardModalMax').value) || 99;
+  var badgeLabel = document.getElementById('rewardModalBadgeLabel').value.trim();
+  if (!badgeLabel) badgeLabel = title.slice(0, 4);
+  var badge = currentBadgeColor;
+  if (!title) { showToast('请输入奖励名称', 'minus-toast'); return; }
+  if (!score || score <= 0) { showToast('请输入有效的积分', 'minus-toast'); return; }
+  if (!badgeLabel) badgeLabel = title.slice(0, 4);
+  if (currentEditId) {
+    var item = redeemRewards.find(function(r) { return r.id === currentEditId; });
+    if (item) {
+      item.title = title;
+      item.score = score;
+      item.desc = desc || title;
+      item.monthlyMax = max;
+      item.badge = badge;
+      item.badgeLabel = badgeLabel;
+      // 同步更新历史记录中的标签
+      for (var i = 0; i < redeemHistory.length; i++) {
+        if (redeemHistory[i].rwId === currentEditId) {
+          redeemHistory[i].badgeLabel = badgeLabel;
+          redeemHistory[i].badge = badge;
+        }
+      }
+      save('kidRedeemHistory', redeemHistory);
+    }
+  } else {
+    redeemRewards.push({ id: uid(), score: score, title: title, desc: desc || title, monthlyMax: max, badge: badge, badgeLabel: badgeLabel });
+  }
+  save('kidRedeemRewards', redeemRewards);
+  closeModal('rewardModal');
+  renderRedeem();
+  showToast('奖励已保存', 'plus-toast');
+}
+
+function deleteRewardFromModal() {
+  showConfirm('确定删除这个兑换奖励吗？', function(ok) {
+    if (!ok) return;
+    redeemRewards = redeemRewards.filter(function(r) { return r.id !== currentEditId; });
+    save('kidRedeemRewards', redeemRewards);
+    renderRedeem();
+    closeModal('rewardModal');
+    showToast('奖励已删除', 'minus-toast');
+  });
+}
+
+function deleteRewardDirect(id) {
+  showConfirm('确定删除这个兑换奖励吗？', function(ok) {
+    if (!ok) return;
+    redeemRewards = redeemRewards.filter(function(r) { return r.id !== id; });
+    save('kidRedeemRewards', redeemRewards);
+    renderRedeem();
+    showToast('奖励已删除', 'minus-toast');
+  });
+}
+
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+function addScore(name, pts, tag, tagColor, desc) {
+  if (editMode) return;
+  var d = document.getElementById('curDate').value;
+  if (!d) return;
+  records.push({ date: d, name: name, pts: pts, id: Date.now() + Math.random(), tag: tag || '', tagColor: tagColor || 'c0', desc: desc || '' });
+  save('kidPointsRecords', records);
+  updateScores();
+  renderLog();
+  renderRedeem();
+  showToast((pts > 0 ? '+ ' : '') + fmtNum(pts) + ' 分 — ' + name, pts > 0 ? 'plus-toast' : 'minus-toast');
+}
+
+function updateScores() {
+  var d = document.getElementById('curDate').value;
+  var m = d ? d.slice(0, 7) : monthStr();
+  var dayRecs = records.filter(function(r) { return r.date === d; });
+  var monthEarn = records.filter(function(r) { return r.date.startsWith(m); }).reduce(function(s, r) { return s + r.pts; }, 0);
+  var monthRedeemCost = redeemHistory.filter(function(h) { return h.month === m; }).reduce(function(s, h) { return s + h.cost; }, 0);
+  var total = monthEarn - monthRedeemCost;
+  var todayP = dayRecs.filter(function(r) { return r.pts > 0; }).reduce(function(s, r) { return s + r.pts; }, 0);
+  var todayM = dayRecs.filter(function(r) { return r.pts < 0; }).reduce(function(s, r) { return s + Math.abs(r.pts); }, 0);
+  document.getElementById('todayScore').textContent = '+' + fmtNum(todayP);
+  document.getElementById('todayMinus').textContent = '-' + fmtNum(todayM);
+  document.getElementById('totalScore').textContent = fmtNum(total);
+}
+
+function renderLog() {
+  var m = document.getElementById('filterMonth').value;
+  if (!m) return;
+  var recs = records.filter(function(r) { return r.date.startsWith(m); }).sort(function(a, b) {
+    if (a.date !== b.date) return b.date.localeCompare(a.date);
+    return b.id - a.id;
+  });
+  var tbody = document.getElementById('logBody');
+  tbody.innerHTML = '';
+  document.getElementById('logEmpty').style.display = recs.length ? 'none' : 'block';
+  var lastDate = '';
+  for (var i = 0; i < recs.length; i++) {
+    var r = recs[i];
+    var tr = document.createElement('tr');
+    var color = r.pts > 0 ? '#3B6D11' : '#A32D2D';
+    var sign = r.pts > 0 ? '+' : '';
+    var dateShow = r.date !== lastDate ? r.date : '';
+    lastDate = r.date;
+    tr.innerHTML = '<td style="color:#888780;font-size:12px">' + dateShow +
+      '</td><td>' + (r.tag ? '<span class="history-badge ' + (r.tagColor || 'c0') + '" style="font-size:10px;margin-right:4px">' + r.tag + '</span>' : '') + r.name + (r.desc ? '<div style="font-size:11px;color:#aaa;margin-top:2px">' + r.desc + '</div>' : '') +
+      '</td><td style="font-weight:600;color:' + color + '">' + sign + fmtNum(r.pts) +
+      '</td><td><button class="del-btn" onclick="delRecord(\'' + r.id + '\')">删除</button></td>';
+    tbody.appendChild(tr);
+  }
+  var monthEarn = records.filter(function(r) { return r.date.startsWith(m); }).reduce(function(s, r) { return s + r.pts; }, 0);
+  var monthRedeemCost = redeemHistory.filter(function(h) { return h.month === m; }).reduce(function(s, h) { return s + h.cost; }, 0);
+  var net = monthEarn - monthRedeemCost;
+  var plus = recs.filter(function(r) { return r.pts > 0; }).reduce(function(s, r) { return s + r.pts; }, 0);
+  var minus = recs.filter(function(r) { return r.pts < 0; }).reduce(function(s, r) { return s + r.pts; }, 0);
+  var redeemCount = redeemHistory.filter(function(h) { return h.month === m; }).length;
+  document.getElementById('monthStats').innerHTML = recs.length || redeemCount ?
+    '<div class="stat-card"><div class="stat-label">可用积分</div><div class="stat-val" style="color:#185FA5">' + fmtNum(net) + '</div></div>' +
+    '<div class="stat-card"><div class="stat-label">奖励合计</div><div class="stat-val" style="color:#3B6D11">+' + fmtNum(plus) + '</div></div>' +
+    '<div class="stat-card"><div class="stat-label">扣分合计</div><div class="stat-val" style="color:#A32D2D">' + fmtNum(minus) + '</div></div>' +
+    '<div class="stat-card"><div class="stat-label">已兑换</div><div class="stat-val" style="color:#BA7517">' + redeemCount + '次</div></div>' : '';
+}
+
+function delRecord(id) {
+  pushUndo();
+  var numId = parseFloat(id);
+  records = records.filter(function(r) { return r.id !== numId; });
+  save('kidPointsRecords', records);
+  updateScores();
+  renderLog();
+  renderRedeem();
+  showToast('已删除', 'minus-toast');
+}
+
+function renderRedeem() {
+  var m = monthStr();
+  var total = records.filter(function(r) { return r.date.startsWith(m); }).reduce(function(s, r) { return s + r.pts; }, 0)
+    - redeemHistory.filter(function(h) { return h.month === m; }).reduce(function(s, h) { return s + h.cost; }, 0);
+  var btnColors = ['btn-orange', 'btn-blue', ''];
+  var html = '';
+  for (var i = 0; i < redeemRewards.length; i++) {
+    var rw = redeemRewards[i];
+    var unlocked = total >= rw.score;
+    var pct = Math.min(100, Math.round(Math.max(0, total) / rw.score * 100));
+    var monthCount = redeemHistory.filter(function(h) { return h.month === m && h.rwId === rw.id; }).length;
+    var maxReached = monthCount >= rw.monthlyMax;
+    var canRedeem = unlocked && !maxReached;
+    html += '<div class="redeem-item ' + (unlocked ? 'unlocked-item' : '') + '">' +
+      '<div class="redeem-edit-btns"><button class="icon-btn" onclick="openRewardModal(\'' + rw.id + '\')" title="编辑">&#9998;</button><button class="icon-btn del" onclick="deleteRewardDirect(\'' + rw.id + '\')" title="删除">&#10005;</button></div>' +
+      '<div class="redeem-head">' +
+        '<div class="redeem-title"><span class="history-badge ' + (rw.badge || 'c1') + '" style="font-size:11px;margin-right:6px">' + (rw.badgeLabel || '奖励') + '</span>' + rw.title + '</div>' +
+        '<span class="redeem-badge ' + (unlocked ? 'badge-unlocked' : 'badge-locked') + '">' +
+          (unlocked ? '已解锁 &#10003;' : '需 ' + rw.score + ' 分') +
+        '</span>' +
+      '</div>' +
+      '<div class="redeem-desc">' + rw.desc + '</div>' +
+      '<div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div>' +
+      '<div class="progress-text">当前 ' + fmtNum(Math.max(0, total)) + ' / ' + rw.score + ' 分 (' + pct + '%)</div>' +
+      '<div class="redeem-info-row">' +
+        '<span class="redeem-times">本月已兑换 ' + monthCount + ' 次' + (rw.monthlyMax < 99 ? '（每月上限' + rw.monthlyMax + '次）' : '') + '</span>' +
+        '<button class="redeem-btn' + (canRedeem ? ' ' + (btnColors[i % 3] || '') : '') + '" ' + (canRedeem ? 'onclick="doRedeem(\'' + rw.id + '\')"' : 'disabled') + '>' +
+          (maxReached ? '本月已达上限' : (unlocked ? '立即兑换' : '积分不足')) +
+        '</button>' +
+      '</div>' +
+    '</div>';
+  }
+  document.getElementById('redeemList').innerHTML = html;
+  renderRedeemHistory();
+}
+
+function doRedeem(rwId) {
+  var rw = redeemRewards.find(function(r) { return r.id === rwId; });
+  if (!rw) return;
+  var m = monthStr();
+  var total = records.filter(function(r) { return r.date.startsWith(m); }).reduce(function(s, r) { return s + r.pts; }, 0)
+    - redeemHistory.filter(function(h) { return h.month === m; }).reduce(function(s, h) { return s + h.cost; }, 0);
+  if (total < rw.score) { showToast('积分不足，无法兑换', 'minus-toast'); return; }
+  var monthCount = redeemHistory.filter(function(h) { return h.month === m && h.rwId === rwId; }).length;
+  if (monthCount >= rw.monthlyMax) { showToast('本月兑换次数已达上限', 'minus-toast'); return; }
+  redeemHistory.push({ month: m, rwId: rwId, title: rw.title, cost: rw.score, date: todayStr(), id: uid(), badgeLabel: rw.badgeLabel || '', badge: rw.badge || 'c1' });
+  save('kidRedeemHistory', redeemHistory);
+  updateScores();
+  renderLog();
+  renderRedeem();
+  showToast('兑换成功！' + rw.title + '，扣除 ' + rw.score + ' 分', 'plus-toast');
+}
+
+function renderRedeemHistory() {
+  var sorted = redeemHistory.slice().sort(function(a, b) { return b.date.localeCompare(a.date) || (b.id > a.id ? 1 : -1); });
+  var tbody = document.getElementById('redeemHistoryBody');
+  var section = document.getElementById('redeemHistorySection');
+  if (sorted.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  var html = '';
+  for (var i = 0; i < sorted.length; i++) {
+    var h = sorted[i];
+    var badgeClass = h.badge || 'c1';
+    var badgeLabel = h.badgeLabel || '奖励';
+    html += '<tr><td style="color:#888780;font-size:12px">' + h.date +
+      '</td><td><span class="history-badge ' + badgeClass + '" style="cursor:pointer;margin-right:4px" onclick="editRedeemBadge(\'' + h.id + '\')" title="点击修改标签">' + badgeLabel + '</span>' + h.title + '</td>' +
+      '<td style="font-weight:600;color:#A32D2D">-' + h.cost + '</td>' +
+      '<td style="text-align:right;white-space:nowrap">' +
+        '<button class="icon-btn del" onclick="deleteRedeemHistory(\'' + h.id + '\')" title="删除该记录" style="font-size:13px">&#10005;</button>' +
+      '</td></tr>';
+  }
+  tbody.innerHTML = html;
+}
+
+function deleteRedeemHistory(hId) {
+  pushUndo();
+  var idx = redeemHistory.findIndex(function(h) { return h.id === hId; });
+  if (idx === -1) return;
+  var h = redeemHistory[idx];
+  var cost = h.cost;
+  var date = h.date;
+  redeemHistory.splice(idx, 1);
+  save('kidRedeemHistory', redeemHistory);
+  // 退还积分：重新计算所有面板
+  updateScores();
+  renderRedeem();
+  renderChart();
+  renderRedeemHistory();
+  showToast('已删除兑换记录，退还 ' + cost + ' 积分', 'plus-toast');
+}
+
+function editRedeemBadge(hId) {
+  var h = redeemHistory.find(function(r) { return r.id === hId; });
+  if (!h) return;
+  var oldLabel = h.badgeLabel || '奖励';
+  var newLabel = prompt('修改标签文字', oldLabel);
+  if (newLabel === null || newLabel.trim() === '') return;
+  newLabel = newLabel.trim().slice(0, 8);
+  h.badgeLabel = newLabel;
+  save('kidRedeemHistory', redeemHistory);
+  renderRedeemHistory();
+  showToast('标签已修改为：' + newLabel, 'plus-toast');
+}
+
+function switchTab(name, el) {
+  var tabs = document.querySelectorAll('.tab');
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
+  el.classList.add('active');
+  var panels = document.querySelectorAll('.panel');
+  for (var i = 0; i < panels.length; i++) panels[i].classList.remove('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'log') renderLog();
+  if (name === 'log') renderLog();
+  if (name === 'redeem') renderRedeem();
+  if (name === 'record') updateScores();
+}
+
+function showToast(msg, cls) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (cls || '') + ' show';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function() { t.classList.remove('show'); }, 2000);
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeModal('ruleModal');
+    closeModal('rewardModal');
+    document.getElementById('exportMenu').classList.remove('show');
+  }
+});
+
+function toggleExportMenu() {
+  document.getElementById('exportMenu').classList.toggle('show');
+}
+
+document.addEventListener('click', function(e) {
+  var menu = document.getElementById('exportMenu');
+  if (!e.target.closest('.export-btn') && !e.target.closest('.export-menu')) {
+    menu.classList.remove('show');
+  }
+});
+
+var _confirmCb = null;
+function showConfirm(msg, cb) {
+  _confirmCb = cb;
+  document.getElementById('confirmMsg').textContent = msg;
+  document.getElementById('confirmModal').classList.remove('hidden');
+}
+function confirmCallback(ok) {
+  document.getElementById('confirmModal').classList.add('hidden');
+  if (_confirmCb) { _confirmCb(ok); _confirmCb = null; }
+}
+
+// ========== 撤销恢复（最多3次）==========
+function pushUndo() {
+  undoStack.push({
+    records: JSON.parse(JSON.stringify(records)),
+    redeemHistory: JSON.parse(JSON.stringify(redeemHistory))
+  });
+  if (undoStack.length > 3) undoStack.shift();
+  updateUndoButton();
+}
+
+function undo() {
+  if (undoStack.length === 0) return;
+  var state = undoStack.pop();
+  records = state.records;
+  redeemHistory = state.redeemHistory;
+  save('kidPointsRecords', records);
+  save('kidRedeemHistory', redeemHistory);
+  updateScores();
+  renderLog();
+  renderChart();
+  renderRedeem();
+  renderRedeemHistory();
+  updateUndoButton();
+  showToast('已恢复（还剩 ' + undoStack.length + ' 次恢复机会）', 'plus-toast');
+}
+
+function updateUndoButton() {
+  var btn = document.getElementById('undoBtn');
+  if (!btn) return;
+  btn.disabled = undoStack.length === 0;
+  btn.style.opacity = undoStack.length === 0 ? '0.45' : '1';
+  btn.title = undoStack.length > 0 ? '恢复上次删除（还剩 ' + undoStack.length + ' 次）' : '暂无可恢复的操作';
+}
+// ==========================================
+
+function clearMonthRecords() {
+  var m = document.getElementById('filterMonth').value;
+  if (!m) return;
+  var count = records.filter(function(r) { return r.date.startsWith(m); }).length;
+  if (count === 0) { showToast('当月暂无记录', 'minus-toast'); return; }
+  showConfirm('确认清除 ' + m + ' 的全部积分记录（共 ' + count + ' 条）？此操作不可撤销！', function(ok) {
+    if (!ok) return;
+    pushUndo();
+    records = records.filter(function(r) { return !r.date.startsWith(m); });
+    save('kidPointsRecords', records);
+    updateScores();
+    renderLog();
+    renderChart();
+    renderRedeem();
+    showToast('已清除 ' + m + ' 积分记录（' + count + ' 条）', 'minus-toast');
+  });
+}
+
+function clearAllRecords() {
+  if (records.length === 0 && redeemHistory.length === 0) { showToast('暂无记录', 'minus-toast'); return; }
+  var total = records.length + redeemHistory.length;
+  showConfirm('确认清除所有积分明细和兑换记录（共 ' + total + ' 条）？此操作不可撤销！', function(ok) {
+    if (!ok) return;
+    pushUndo();
+    records = [];
+    save('kidPointsRecords', records);
+    redeemHistory = [];
+    save('kidRedeemHistory', redeemHistory);
+    updateScores();
+    renderLog();
+    renderChart();
+    renderRedeem();
+    renderRedeemHistory();
+    showToast('已清除全部积分明细和兑换记录', 'minus-toast');
+  });
+}
+
+function getExportData() {
+  var m = document.getElementById('filterMonth').value || monthStr();
+  var name = kidName || '小朋友';
+  var recs = records.filter(function(r) { return r.date.startsWith(m); }).sort(function(a, b) {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    return a.id - b.id;
+  });
+  var redeemList = redeemHistory.filter(function(h) { return h.month === m; });
+  var earned = recs.reduce(function(s, r) { return s + r.pts; }, 0);
+  var redeemed = redeemList.reduce(function(s, h) { return s + h.cost; }, 0);
+  return { month: m, name: name, recs: recs, redeemList: redeemList, earned: earned, redeemed: redeemed, net: earned - redeemed };
+}
+
+function exportCSV() {
+  var d = getExportData();
+  var BOM = '\uFEFF';
+  var lines = [];
+  lines.push(d.name + '积分奖惩表');
+  lines.push('导出月份:,' + d.month);
+  lines.push('');
+  lines.push('日期,事项,分值,类型');
+  for (var i = 0; i < d.recs.length; i++) {
+    var r = d.recs[i];
+    var type = r.pts > 0 ? '奖励' : '扣分';
+    lines.push(r.date + ',"' + r.name.replace(/"/g, '""') + '",' + r.pts + ',' + type);
+  }
+  lines.push('');
+  lines.push('本月奖励合计:,' + d.earned);
+  lines.push('本月兑换扣除:,' + (-d.redeemed));
+  lines.push('本月可用积分:,' + d.net);
+  lines.push('');
+  lines.push('兑换记录');
+  lines.push('日期,兑换内容,消耗积分');
+  for (var i = 0; i < d.redeemList.length; i++) {
+    var h = d.redeemList[i];
+    lines.push(h.date + ',"' + h.title.replace(/"/g, '""') + '",' + (-h.cost));
+  }
+  var csv = BOM + lines.join('\n');
+  downloadFile(csv, todayStr() + '积分奖惩表.csv', 'text/csv;charset=utf-8');
+  showToast('CSV 已导出', 'plus-toast');
+  document.getElementById('exportMenu').classList.remove('show');
+}
+
+function exportExcel() {
+  var d = getExportData();
+  var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+  html += '<head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>积分明细</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->';
+  html += '<style>td,th{border:1px solid #ccc;padding:4px 8px;font-size:12px;font-family:"Microsoft YaHei",sans-serif}th{background:#f0f0f0;font-weight:bold;text-align:center}.title-row{font-size:16px;font-weight:bold;text-align:center}.summary-label{text-align:right;font-weight:bold;background:#f9f9f9}.pos{color:green}.neg{color:red}</style></head><body>';
+  html += '<table>';
+  html += '<tr class="title-row"><td colspan="4">' + d.name + '积分奖惩表</td></tr>';
+  html += '<tr><td colspan="4" style="text-align:center">月份：' + d.month + '</td></tr>';
+  html += '<tr><th>日期</th><th>事项</th><th>分值</th><th>类型</th></tr>';
+  for (var i = 0; i < d.recs.length; i++) {
+    var r = d.recs[i];
+    var cls = r.pts > 0 ? 'pos' : 'neg';
+    var type = r.pts > 0 ? '奖励' : '扣分';
+    html += '<tr><td>' + r.date + '</td><td>' + escHtml(r.name) + '</td><td class="' + cls + '">' + r.pts + '</td><td>' + type + '</td></tr>';
+  }
+  html += '<tr><td colspan="4"></td></tr>';
+  html += '<tr><td class="summary-label" colspan="2">本月奖励合计</td><td class="pos">' + d.earned + '</td><td></td></tr>';
+  html += '<tr><td class="summary-label" colspan="2">本月兑换扣除</td><td class="neg">' + (-d.redeemed) + '</td><td></td></tr>';
+  html += '<tr><td class="summary-label" colspan="2">本月可用积分</td><td style="font-weight:bold;font-size:14px">' + d.net + '</td><td></td></tr>';
+  html += '<tr><td colspan="4"></td></tr>';
+  html += '<tr class="title-row"><td colspan="4">兑换记录</td></tr>';
+  html += '<tr><th>日期</th><th colspan="2">兑换内容</th><th>消耗积分</th></tr>';
+  for (var i = 0; i < d.redeemList.length; i++) {
+    var h = d.redeemList[i];
+    html += '<tr><td>' + h.date + '</td><td colspan="2">' + escHtml(h.title) + '</td><td class="neg">' + (-h.cost) + '</td></tr>';
+  }
+  html += '</table></body></html>';
+  downloadFile(html, todayStr() + '积分奖惩表.xls', 'application/vnd.ms-excel');
+  showToast('Excel 已导出', 'plus-toast');
+  document.getElementById('exportMenu').classList.remove('show');
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function downloadFile(content, filename, mime) {
+  var blob = new Blob([content], { type: mime });
+  var link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+}
+
+var WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
+
+function renderChart() {
+  var fromStr = document.getElementById('chartDateFrom').value;
+  var toStr = document.getElementById('chartDateTo').value;
+  if (!fromStr || !toStr) return;
+  if (fromStr > toStr) { showToast('开始日期不能晚于结束日期', 'minus-toast'); return; }
+
+  // Cap end date at today
+  var today = todayStr();
+  if (toStr > today) { toStr = today; document.getElementById('chartDateTo').value = today; }
+
+  var fromDate = new Date(fromStr);
+  var toDate = new Date(toStr);
+
+  // Collect records and redeems in range
+  var recs = records.filter(function(r) { return r.date >= fromStr && r.date <= toStr; });
+
+  // Calculate daily net points
+  var dailyMap = {};
+  for (var i = 0; i < recs.length; i++) {
+    var r = recs[i];
+    if (!dailyMap[r.date]) dailyMap[r.date] = { plus: 0, minus: 0 };
+    if (r.pts > 0) dailyMap[r.date].plus += r.pts;
+    else dailyMap[r.date].minus += r.pts;
+  }
+
+  // Build day list from from to to
+  var days = [];
+  var cumPoints = 0;
+  var cur = new Date(fromDate);
+  while (cur <= toDate) {
+    var ds = localDateStr(cur);
+    var info = dailyMap[ds] || { plus: 0, minus: 0 };
+    var net = info.plus + info.minus;
+    cumPoints += net;
+    days.push({ date: ds, day: cur.getDate(), weekday: WEEKDAYS[cur.getDay()], weekdayNum: cur.getDay(), plus: info.plus, minus: info.minus, net: net, cum: cumPoints });
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  renderTrendLine(days);
+}
+
+function renderTrendLine(days) {
+  var container = document.getElementById('trendChartContainer');
+  var empty = document.getElementById('trendChartEmpty');
+  var legend = document.getElementById('trendChartLegend');
+
+  var hasData = days.some(function(d) { return d.net !== 0; });
+  if (!hasData) { container.innerHTML = ''; container.appendChild(empty); empty.style.display = 'block'; legend.style.display = 'none'; return; }
+  legend.style.display = 'flex';
+
+  var W = Math.max(600, days.length * 28);
+  var H = 220;
+  var padL = days.length > 31 ? 56 : 42, padR = 14, padT = 22, padB = 50;
+  var chartW = W - padL - padR;
+  var chartH = H - padT - padB;
+
+  var vals = days.map(function(d) { return d.net; });
+  var minV = Math.min.apply(null, vals);
+  var maxV = Math.max.apply(null, vals);
+  if (maxV === minV) { maxV += 1; minV -= 1; }
+  var range = maxV - minV;
+
+  var svg = '<svg width="' + W + '" height="' + H + '" style="font-family:-apple-system,sans-serif">';
+
+  // Grid lines
+  var gridCount = 5;
+  for (var i = 0; i <= gridCount; i++) {
+    var y = padT + chartH - (chartH * i / gridCount);
+    var v = minV + range * i / gridCount;
+    svg += '<line x1="' + padL + '" y1="' + y + '" x2="' + (W - padR) + '" y2="' + y + '" stroke="#e8e7e2" stroke-width="0.5"/>';
+    svg += '<text x="' + (padL - 6) + '" y="' + (y + 4) + '" text-anchor="end" fill="#888780" font-size="10">' + fmtNum(Math.round(v)) + '</text>';
+  }
+
+  // Build polyline for daily net points
+  var linePoints = '';
+  for (var i = 0; i < days.length; i++) {
+    var x = padL + (days.length === 1 ? chartW / 2 : chartW * i / (days.length - 1));
+    var yNet = padT + chartH - (chartH * (days[i].net - minV) / range);
+    linePoints += x + ',' + yNet + ' ';
+  }
+
+  // Area fill to zero line
+  var firstX = padL;
+  var lastX = W - padR;
+  var zeroY = padT + chartH - (chartH * (0 - minV) / range);
+  svg += '<polygon points="' + firstX + ',' + zeroY + ' ' + linePoints + lastX + ',' + zeroY + '" fill="rgba(24,95,165,0.06)"/>';
+
+  // Line
+  svg += '<polyline points="' + linePoints + '" fill="none" stroke="#185FA5" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+
+  // Zero line
+  svg += '<line x1="' + padL + '" y1="' + zeroY + '" x2="' + (W - padR) + '" y2="' + zeroY + '" stroke="#BA7517" stroke-width="0.8" stroke-dasharray="4,3"/>';
+
+  // Data points with value labels
+  var crossMonth = days.length > 31 || (days[0].date.slice(5, 7) !== days[days.length - 1].date.slice(5, 7));
+  var labelInterval = days.length > 60 ? 5 : (days.length > 31 ? 3 : (days.length > 28 ? 2 : 1));
+  var valLabelInterval = days.length > 45 ? 3 : (days.length > 28 ? 2 : 1);
+  for (var i = 0; i < days.length; i++) {
+    var d = days[i];
+    var x = padL + (days.length === 1 ? chartW / 2 : chartW * i / (days.length - 1));
+    var yNet = padT + chartH - (chartH * (d.net - minV) / range);
+
+    // Dot for all non-zero days
+    if (d.net !== 0) {
+      var dotColor = d.net >= 0 ? '#185FA5' : '#A32D2D';
+      svg += '<circle cx="' + x + '" cy="' + yNet + '" r="3" fill="' + dotColor + '" stroke="#fff" stroke-width="1.5">';
+      svg += '<title>' + d.date + ' 周' + d.weekday + ': ' + (d.net > 0 ? '+' : '') + fmtNum(d.net) + '分</title></circle>';
+    }
+
+    // Value label above/below point
+    if (d.net !== 0 && (i % valLabelInterval === 0 || i === days.length - 1)) {
+      var sign = d.net > 0 ? '+' : '';
+      var valColor = d.net >= 0 ? '#185FA5' : '#A32D2D';
+      var valY = d.net > 0 ? (yNet - 8) : (yNet + 14);
+      svg += '<text x="' + x + '" y="' + valY + '" text-anchor="middle" fill="' + valColor + '" font-size="10" font-weight="600">' + sign + fmtNum(d.net) + '</text>';
+    }
+
+    // X-axis label: weekday on top, date below
+    if (i % labelInterval === 0 || i === days.length - 1) {
+      var labelY = H - padB + 14;
+      var dateLabel = crossMonth ? (parseInt(d.date.slice(5, 7)) + '/' + d.day) : String(d.day);
+      svg += '<text x="' + x + '" y="' + labelY + '" text-anchor="middle" fill="#BA7517" font-size="9" font-weight="500">周' + d.weekday + '</text>';
+      svg += '<text x="' + x + '" y="' + (labelY + 13) + '" text-anchor="middle" fill="#888780" font-size="10">' + dateLabel + '</text>';
+    }
+  }
+
+  svg += '</svg>';
+  container.innerHTML = svg;
+}
+
+init();
+
+// ========== 数据导入/导出 ==========
+function exportData() {
+  var data = {
+    kidName: localStorage.getItem('kidName') || '',
+    kidRewardRules: JSON.parse(localStorage.getItem('kidRewardRules') || '[]'),
+    kidPenaltyRules: JSON.parse(localStorage.getItem('kidPenaltyRules') || '[]'),
+    kidPointsRecords: JSON.parse(localStorage.getItem('kidPointsRecords') || '[]'),
+    kidRedeemHistory: JSON.parse(localStorage.getItem('kidRedeemHistory') || '[]'),
+    kidRedeemRewards: JSON.parse(localStorage.getItem('kidRedeemRewards') || '[]'),
+    exportDate: new Date().toISOString(),
+    appName: '积分奖惩表'
+  };
+  var blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (data.kidName || '孩子') + '_积分数据_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('数据已导出', 'plus-toast');
+}
+
+function importData(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = JSON.parse(e.target.result);
+      if (!data.appName || data.appName !== '积分奖惩表') {
+        showToast('文件格式不正确', 'minus-toast');
+        return;
+      }
+      showConfirm('导入将覆盖当前所有数据，确认继续？', function(ok) {
+        if (!ok) { input.value = ''; return; }
+        if (data.kidName !== undefined) localStorage.setItem('kidName', data.kidName);
+        if (data.kidRewardRules) localStorage.setItem('kidRewardRules', JSON.stringify(data.kidRewardRules));
+        if (data.kidPenaltyRules) localStorage.setItem('kidPenaltyRules', JSON.stringify(data.kidPenaltyRules));
+        if (data.kidPointsRecords) localStorage.setItem('kidPointsRecords', JSON.stringify(data.kidPointsRecords));
+        if (data.kidRedeemHistory) localStorage.setItem('kidRedeemHistory', JSON.stringify(data.kidRedeemHistory));
+        if (data.kidRedeemRewards) localStorage.setItem('kidRedeemRewards', JSON.stringify(data.kidRedeemRewards));
+        // 重新初始化
+        if (typeof load === 'function') { kidName = localStorage.getItem('kidName') || ''; }
+        rewardRules = JSON.parse(localStorage.getItem('kidRewardRules') || '[]');
+        penaltyRules = JSON.parse(localStorage.getItem('kidPenaltyRules') || '[]');
+        records = JSON.parse(localStorage.getItem('kidPointsRecords') || '[]');
+        redeemHistory = JSON.parse(localStorage.getItem('kidRedeemHistory') || '[]');
+        redeemRewards = JSON.parse(localStorage.getItem('kidRedeemRewards') || '[]');
+        init();
+        showToast('数据已导入（导出时间：' + (data.exportDate||'').slice(0,10) + '）', 'plus-toast');
+        input.value = '';
+      });
+    } catch(ex) {
+      showToast('文件解析失败：' + ex.message, 'minus-toast');
+      input.value = '';
+    }
+  };
+  reader.readAsText(file);
+}
+// =======================================
+
+</script>
+</body>
+</html>
