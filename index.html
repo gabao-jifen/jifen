@@ -16,6 +16,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .title:hover .title-edit-hint{opacity:1}
 .title-input{font-size:18px;font-weight:600;color:#2C2C2A;border:1px solid #85B7EB;border-radius:8px;padding:2px 8px;outline:none;background:#fff;width:220px}
 .header-right{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.btn-action{display:flex;align-items:center;justify-content:center;padding:6px 10px;font-size:12px;border:1px solid #d3d1c7;border-radius:7px;background:#FAFAF8;color:#5F5E5A;cursor:pointer;white-space:nowrap;box-sizing:border-box;min-height:32px}
+.btn-export-data{border-color:#B8AFA5;background:#F9F8F5;color:#6B5E50}
+.btn-import-data{border-color:#A5B8D4;background:#F0F5FB;color:#185FA5}
+.btn-export-excel{border-color:#D8C5B5;background:#FFF8F0;color:#7A4A1A}
+.btn-action:hover{opacity:0.82;transform:translateY(-1px)}
 .edit-toggle{background:none;border:1px solid #d3d1c7;border-radius:8px;padding:6px 14px;font-size:13px;color:#5F5E5A;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:4px}
 .edit-toggle:hover{border-color:#185FA5;color:#185FA5}
 .edit-toggle.active{background:#185FA5;color:#fff;border-color:#185FA5}
@@ -232,10 +238,12 @@ body.edit-mode .add-reward-btn{display:flex}
       <button class="edit-toggle" style="padding:4px 12px;font-size:12px" onclick="cancelEditTitle()">取消</button>
     </div>
     <div class="header-right">
-      <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
-        <button onclick="exportData()" style="padding:5px 12px;font-size:12px;border:1px solid #D3D1C7;border-radius:6px;background:#F9F8F5;color:#5F5E5A;cursor:pointer">导出数据</button>
-        <button onclick="document.getElementById('importFileInput').click()" style="padding:5px 12px;font-size:12px;border:1px solid #85B7EB;border-radius:6px;background:#F0F5FB;color:#185FA5;cursor:pointer">导入数据</button>
+      <div class="btn-grid">
+        <button onclick="exportData()" class="btn-action btn-export-data">导出数据</button>
+        <button onclick="document.getElementById('importFileInput').click()" class="btn-action btn-import-data">导入数据</button>
         <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(this)">
+        <button class="edit-toggle btn-action" id="editToggle" onclick="toggleEditMode()">&#9998; 编辑规则</button>
+        <button onclick="exportExcel()" class="btn-action btn-export-excel">导出Excel</button>
       </div>
       <div class="score-board">
         <div class="score-card"><div class="score-label">今日得分</div><div class="score-val plus" id="todayScore">+0</div></div>
@@ -243,15 +251,18 @@ body.edit-mode .add-reward-btn{display:flex}
         <div class="score-card"><div class="score-label">本月累计</div><div class="score-val total" id="totalScore">0</div></div>
         <div class="score-card" style="border-color:#97C459;background:linear-gradient(135deg,#FCFFF7,#F5FBF0)"><div class="score-label">总积分</div><div class="score-val" id="allTimeTotal" style="color:#27500A">0</div></div>
       </div>
-      <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;align-items:stretch">
-        <button class="edit-toggle" id="editToggle" onclick="toggleEditMode()">&#9998; 编辑规则</button>
-        <button onclick="exportExcel()" style="padding:6px 14px;font-size:13px;border:1px solid #D8C5B5;border-radius:8px;background:#FFF8F0;color:#7A4A1A;cursor:pointer;width:100%;box-sizing:border-box">导出Excel</button>
+    </div>
+    </div>
+    <div class="chart-date-row" style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+        <label style="font-size:13px;color:#5F5E5A">趋势日期：</label>
+        <input type="date" id="chartDateFrom" onchange="renderChart()" style="padding:3px 6px;font-size:12px;border:1px solid #D3D1C7;border-radius:5px">
+        <span style="font-size:12px;color:#888780">至</span>
+        <input type="date" id="chartDateTo" onchange="renderChart()" style="padding:3px 6px;font-size:12px;border:1px solid #D3D1C7;border-radius:5px">
       </div>
-    </div>
-    </div>
     <div class="chart-container" id="trendChartContainer">
       <div class="chart-empty" id="trendChartEmpty">暂无数据，记录积分后即可查看趋势</div>
     </div>
+    <div class="chart-legend" id="trendChartLegend" style="display:none;justify-content:center;gap:16px;margin-top:12px;flex-wrap:wrap"></div>
   </div>
 
   <div class="tabs">
@@ -929,14 +940,17 @@ function renderLog() {
 }
 
 function delRecord(id) {
-  pushUndo();
-  var numId = parseFloat(id);
-  records = records.filter(function(r) { return r.id !== numId; });
-  save('kidPointsRecords', records);
-  updateScores();
-  renderLog();
-  renderRedeem();
-  showToast('已删除', 'minus-toast');
+  showConfirm('确定删除这条积分记录吗？', function(ok) {
+    if (!ok) return;
+    pushUndo();
+    var numId = parseFloat(id);
+    records = records.filter(function(r) { return r.id !== numId; });
+    save('kidPointsRecords', records);
+    updateScores();
+    renderLog();
+    renderRedeem();
+    showToast('已删除', 'minus-toast');
+  });
 }
 
 function renderRedeem() {
@@ -1050,20 +1064,21 @@ function renderRedeemHistory() {
 }
 
 function deleteRedeemHistory(hId) {
-  pushUndo();
-  var idx = redeemHistory.findIndex(function(h) { return h.id === hId; });
-  if (idx === -1) return;
-  var h = redeemHistory[idx];
-  var cost = h.cost;
-  var date = h.date;
-  redeemHistory.splice(idx, 1);
-  save('kidRedeemHistory', redeemHistory);
-  // 退还积分：重新计算所有面板
-  updateScores();
-  renderRedeem();
-  renderChart();
-  renderRedeemHistory();
-  showToast('已删除兑换记录，退还 ' + cost + ' 积分', 'plus-toast');
+  showConfirm('确定删除这条兑换记录吗？', function(ok) {
+    if (!ok) return;
+    pushUndo();
+    var idx = redeemHistory.findIndex(function(h) { return h.id === hId; });
+    if (idx === -1) return;
+    var h = redeemHistory[idx];
+    var cost = h.cost;
+    redeemHistory.splice(idx, 1);
+    save('kidRedeemHistory', redeemHistory);
+    updateScores();
+    renderRedeem();
+    renderChart();
+    renderRedeemHistory();
+    showToast('已删除兑换记录，退还 ' + cost + ' 积分', 'plus-toast');
+  });
 }
 
 function editRedeemBadge(hId) {
