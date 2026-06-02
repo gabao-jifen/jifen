@@ -1306,6 +1306,7 @@ function getWeekDay(dateStr) {
 }
 
 // ========== 导出 Excel（纯XML，不依赖外部库） ==========
+
 function exportExcel() {
   document.getElementById('exportMenu').classList.remove('show');
   showExportDateRange(function(from, to) {
@@ -1318,31 +1319,28 @@ function doExportExcel(fromDate, toDate) {
   function _wd(ds) { return '星期' + WEEK_DAYS[new Date(ds).getDay()]; }
   function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-  var xml = '<?xml version="1.0" encoding="UTF-8"?>\r\n';
-  xml += '<?mso-application progid="Excel.Sheet"?>\r\n';
-  xml += '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"\r\n';
-  xml += ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\r\n';
-  xml += '<Styles>\r\n';
-  xml += ' <Style ss:ID="hd"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#185FA5" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>\r\n';
-  xml += ' <Style ss:ID="sm"><Font ss:Bold="1"/><Interior ss:Color="#FFF2CC" ss:Pattern="Solid"/></Style>\r\n';
-  xml += ' <Style ss:ID="rw"><Font ss:Bold="1" ss:Color="#C00000"/><Interior ss:Color="#FCE4EC" ss:Pattern="Solid"/></Style>\r\n';
-  xml += ' <Style ss:ID="gn"><Font ss:Bold="1" ss:Color="#2E7D32"/><Interior ss:Color="#E8F5E9" ss:Pattern="Solid"/></Style>\r\n';
-  xml += '</Styles>\r\n';
+  var h = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>';
+  h += 'td{mso-number-format:"\@";border:1px solid #ccc;padding:4px 8px;font-size:13px}';
+  h += '.hd{background:#185FA5;color:#fff;font-weight:bold;text-align:center}';
+  h += '.sm{background:#FFF2CC;font-weight:bold}';
+  h += '.rw{background:#FCE4EC;font-weight:bold;color:#C00000}';
+  h += '.gn{background:#E8F5E9;font-weight:bold;color:#2E7D32}';
+  h += '.nm{mso-number-format:"General"}';
+  h += '</style></head><body>';
 
   // ===== Sheet1：积分规则 =====
-  xml += '<Worksheet ss:Name="积分规则"><Table ss:DefaultColumnWidth="80">\r\n';
-  xml += '<Column ss:Width="60"/><Column ss:Width="60"/><Column ss:Width="140"/><Column ss:Width="220"/><Column ss:Width="60"/>\r\n';
-  xml += '<Row ss:StyleID="hd"><Cell><Data ss:Type="String">类型</Data></Cell><Cell><Data ss:Type="String">标签</Data></Cell><Cell><Data ss:Type="String">规则名称</Data></Cell><Cell><Data ss:Type="String">说明</Data></Cell><Cell><Data ss:Type="String">分值</Data></Cell></Row>\r\n';
+  h += '<table border="1" cellspacing="0" cellpadding="0"><caption><b>积分规则</b></caption>';
+  h += '<tr class="hd"><td>类型</td><td>标签</td><td>规则名称</td><td>说明</td><td>分值</td></tr>';
   rewardRules.forEach(function(r) {
-    xml += '<Row><Cell><Data ss:Type="String">奖励</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.tag) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.name) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.desc) + '</Data></Cell><Cell><Data ss:Type="String">' + (r.pts > 0 ? '+' : '') + r.pts + '</Data></Cell></Row>\r\n';
+    h += '<tr><td>奖励</td><td>' + _esc(r.tag) + '</td><td>' + _esc(r.name) + '</td><td>' + _esc(r.desc) + '</td><td>' + (r.pts > 0 ? '+' : '') + r.pts + '</td></tr>';
   });
   penaltyRules.forEach(function(r) {
-    xml += '<Row><Cell><Data ss:Type="String">惩罚</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.tag) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.name) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.desc) + '</Data></Cell><Cell><Data ss:Type="String">' + (r.pts > 0 ? '+' : '') + r.pts + '</Data></Cell></Row>\r\n';
+    h += '<tr><td>惩罚</td><td>' + _esc(r.tag) + '</td><td>' + _esc(r.name) + '</td><td>' + _esc(r.desc) + '</td><td>' + (r.pts > 0 ? '+' : '') + r.pts + '</td></tr>';
   });
   redeemRewards.forEach(function(r) {
-    xml += '<Row><Cell><Data ss:Type="String">兑换</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.tag) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.name) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.desc) + '</Data></Cell><Cell><Data ss:Type="String">消耗' + r.cost + '分</Data></Cell></Row>\r\n';
+    h += '<tr><td>兑换</td><td>' + _esc(r.tag) + '</td><td>' + _esc(r.name) + '</td><td>' + _esc(r.desc) + '</td><td>消耗' + r.cost + '分</td></tr>';
   });
-  xml += '</Table></Worksheet>\r\n';
+  h += '</table><br/>';
 
   // ===== Sheet2：积分明细（全量数据） =====
   var filteredRecords = records.filter(function(r) {
@@ -1353,22 +1351,18 @@ function doExportExcel(fromDate, toDate) {
   filteredRecords.sort(function(a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
 
   var totalReward = 0, totalPenalty = 0;
-  filteredRecords.forEach(function(r) {
-    if (r.pts > 0) totalReward += r.pts; else totalPenalty += r.pts;
-  });
-  var totalPts = totalReward + totalPenalty;
+  filteredRecords.forEach(function(r) { if (r.pts > 0) totalReward += r.pts; else totalPenalty += r.pts; });
 
-  xml += '<Worksheet ss:Name="积分明细"><Table ss:DefaultColumnWidth="80">\r\n';
-  xml += '<Column ss:Width="80"/><Column ss:Width="60"/><Column ss:Width="150"/><Column ss:Width="50"/><Column ss:Width="40"/><Column ss:Width="60"/>\r\n';
-  xml += '<Row ss:StyleID="hd"><Cell><Data ss:Type="String">日期</Data></Cell><Cell><Data ss:Type="String">星期</Data></Cell><Cell><Data ss:Type="String">事项/行为</Data></Cell><Cell><Data ss:Type="String">分值</Data></Cell><Cell><Data ss:Type="String">类型</Data></Cell><Cell><Data ss:Type="String">标签</Data></Cell></Row>\r\n';
+  h += '<table border="1" cellspacing="0" cellpadding="0"><caption><b>积分明细</b></caption>';
+  h += '<tr class="hd"><td>日期</td><td>星期</td><td>事项/行为</td><td>分值</td><td>类型</td><td>标签</td></tr>';
   filteredRecords.forEach(function(r) {
     var tp = r.pts > 0 ? '奖励' : '扣分';
-    xml += '<Row><Cell><Data ss:Type="String">' + _esc(r.date) + '</Data></Cell><Cell><Data ss:Type="String">' + _wd(r.date) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.name) + '</Data></Cell><Cell><Data ss:Type="Number">' + r.pts + '</Data></Cell><Cell><Data ss:Type="String">' + tp + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.tag) + '</Data></Cell></Row>\r\n';
+    h += '<tr><td>' + _esc(r.date) + '</td><td>' + _wd(r.date) + '</td><td>' + _esc(r.name) + '</td><td class="nm">' + (r.pts > 0 ? '+' : '') + r.pts + '</td><td>' + tp + '</td><td>' + _esc(r.tag) + '</td></tr>';
   });
-  xml += '<Row ss:StyleID="sm"><Cell><Data ss:Type="String">奖励合计</Data></Cell><Cell></Cell><Cell></Cell><Cell><Data ss:Type="Number">' + totalReward + '</Data></Cell><Cell><Data ss:Type="String">奖励</Data></Cell><Cell></Cell></Row>\r\n';
-  xml += '<Row ss:StyleID="rw"><Cell><Data ss:Type="String">扣分合计</Data></Cell><Cell></Cell><Cell></Cell><Cell><Data ss:Type="Number">' + totalPenalty + '</Data></Cell><Cell><Data ss:Type="String">扣分</Data></Cell><Cell></Cell></Row>\r\n';
-  xml += '<Row ss:StyleID="gn"><Cell><Data ss:Type="String">净积分</Data></Cell><Cell></Cell><Cell></Cell><Cell><Data ss:Type="Number">' + totalPts + '</Data></Cell><Cell></Cell><Cell></Cell></Row>\r\n';
-  xml += '</Table></Worksheet>\r\n';
+  h += '<tr class="sm"><td>奖励合计</td><td></td><td></td><td class="nm">+' + totalReward + '</td><td>奖励</td><td></td></tr>';
+  h += '<tr class="rw"><td>扣分合计</td><td></td><td></td><td class="nm">' + totalPenalty + '</td><td>扣分</td><td></td></tr>';
+  h += '<tr class="gn"><td>净积分</td><td></td><td></td><td class="nm">' + (totalReward + totalPenalty) + '</td><td></td><td></td></tr>';
+  h += '</table><br/>';
 
   // ===== Sheet3：兑换奖励明细 =====
   var filteredRedeem = redeemHistory.filter(function(h) {
@@ -1380,54 +1374,46 @@ function doExportExcel(fromDate, toDate) {
   var totalCost = 0;
   filteredRedeem.forEach(function(h) { totalCost += h.cost; });
 
-  xml += '<Worksheet ss:Name="兑换明细"><Table ss:DefaultColumnWidth="80">\r\n';
-  xml += '<Column ss:Width="80"/><Column ss:Width="60"/><Column ss:Width="170"/><Column ss:Width="60"/><Column ss:Width="80"/>\r\n';
-  xml += '<Row ss:StyleID="hd"><Cell><Data ss:Type="String">日期</Data></Cell><Cell><Data ss:Type="String">星期</Data></Cell><Cell><Data ss:Type="String">兑换内容</Data></Cell><Cell><Data ss:Type="Number">消耗积分</Data></Cell><Cell><Data ss:Type="String">类型</Data></Cell></Row>\r\n';
-  filteredRedeem.forEach(function(h) {
-    xml += '<Row><Cell><Data ss:Type="String">' + _esc(h.date) + '</Data></Cell><Cell><Data ss:Type="String">' + _wd(h.date) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(h.title) + '</Data></Cell><Cell><Data ss:Type="Number">' + (-h.cost) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(h.type || '奖励兑换') + '</Data></Cell></Row>\r\n';
+  h += '<table border="1" cellspacing="0" cellpadding="0"><caption><b>兑换明细</b></caption>';
+  h += '<tr class="hd"><td>日期</td><td>星期</td><td>兑换内容</td><td>消耗积分</td><td>类型</td></tr>';
+  filteredRedeem.forEach(function(r) {
+    h += '<tr><td>' + _esc(r.date) + '</td><td>' + _wd(r.date) + '</td><td>' + _esc(r.title) + '</td><td class="nm">-' + r.cost + '</td><td>' + _esc(r.type || '奖励兑换') + '</td></tr>';
   });
-  xml += '<Row ss:StyleID="rw"><Cell><Data ss:Type="String">消耗积分合计</Data></Cell><Cell></Cell><Cell></Cell><Cell><Data ss:Type="Number">' + (-totalCost) + '</Data></Cell><Cell></Cell></Row>\r\n';
-  xml += '</Table></Worksheet>\r\n';
+  h += '<tr class="rw"><td>消耗积分合计</td><td></td><td></td><td class="nm">-' + totalCost + '</td><td></td></tr>';
+  h += '</table><br/>';
 
-  // ===== Sheet4：打印模板（行=积分规则，列=日期/星期留空） =====
+  // ===== Sheet4：打印模板 =====
   var allRules = [];
   rewardRules.forEach(function(r) { allRules.push({tag:r.tag||'', name:r.name, pts:r.pts}); });
   penaltyRules.forEach(function(r) { allRules.push({tag:r.tag||'', name:r.name, pts:r.pts}); });
 
-  xml += '<Worksheet ss:Name="打印模板"><Table ss:DefaultColumnWidth="60" ss:DefaultRowHeight="20">\r\n';
-  xml += '<Column ss:Width="40"/><Column ss:Width="50"/><Column ss:Width="120"/><Column ss:Width="40"/>\r\n';
-  for (var dd = 1; dd <= 31; dd++) {
-    xml += '<Column ss:Width="50"/><Column ss:Width="40"/>\r\n';
-  }
-  // 表头
-  xml += '<Row ss:StyleID="hd"><Cell><Data ss:Type="String">序号</Data></Cell><Cell><Data ss:Type="String">标签</Data></Cell><Cell><Data ss:Type="String">规则名称</Data></Cell><Cell><Data ss:Type="String">分值</Data></Cell>';
-  for (var d = 1; d <= 31; d++) {
-    xml += '<Cell><Data ss:Type="String">日期' + d + '</Data></Cell><Cell><Data ss:Type="String">星期</Data></Cell>';
-  }
-  xml += '</Row>\r\n';
-  // 每条规则一行
+  h += '<table border="1" cellspacing="0" cellpadding="0"><caption><b>打印模板（每日记录打勾）</b></caption>';
+  h += '<tr class="hd"><td>序号</td><td>标签</td><td>规则名称</td><td>分值</td>';
+  for (var d = 1; d <= 31; d++) { h += '<td>日期' + d + '</td><td>星期</td>'; }
+  h += '</tr>';
   allRules.forEach(function(r, idx) {
-    xml += '<Row><Cell><Data ss:Type="Number">' + (idx+1) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.tag) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.name) + '</Data></Cell><Cell><Data ss:Type="String">' + (r.pts > 0 ? '+' : '') + r.pts + '</Data></Cell>';
-    for (var dd = 0; dd < 62; dd++) {
-      xml += '<Cell></Cell>';
-    }
-    xml += '</Row>\r\n';
+    h += '<tr><td>' + (idx+1) + '</td><td>' + _esc(r.tag) + '</td><td>' + _esc(r.name) + '</td><td>' + (r.pts > 0 ? '+' : '') + r.pts + '</td>';
+    for (var dd = 0; dd < 62; dd++) { h += '<td></td>'; }
+    h += '</tr>';
   });
-  // 签名行
-  xml += '<Row><Cell ss:MergeAcross="1"><Data ss:Type="String">家长签名：__________</Data></Cell><Cell ss:MergeAcross="' + (64) + '"></Cell></Row>\r\n';
-  xml += '<Row><Cell ss:MergeAcross="1"><Data ss:Type="String">孩子签名：__________</Data></Cell><Cell ss:MergeAcross="' + (64) + '"></Cell></Row>\r\n';
-  xml += '</Table></Worksheet>\r\n';
+  h += '<tr><td colspan="2">家长签名：__________</td><td colspan="65">孩子签名：__________</td></tr>';
+  h += '</table>';
 
-  xml += '</Workbook>';
+  h += '</body></html>';
 
-  // 下载
+  // 下载（加 BOM 保证 Excel 识别 UTF-8）
   var rangeLabel = (fromDate || '起始') + '至' + (toDate || '今日');
   var fileName = (load('kidName','') || '积分奖惩表') + '_' + rangeLabel + '.xls';
-  downloadFile(xml, fileName, 'application/vnd.ms-excel;charset=utf-8');
+  var blob = new Blob(['﻿' + h], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  var link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
   showToast('Excel 已导出（' + rangeLabel + '）', 'plus-toast');
 }
-
-// ========== 导出 CSV（也加日期范围） ==========function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function downloadFile(content, filename, mime) {
   var blob = new Blob([content], { type: mime });
@@ -1440,7 +1426,10 @@ function downloadFile(content, filename, mime) {
   URL.revokeObjectURL(link.href);
 }
 
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
 var WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
+
 
 function renderChart() {
   var fromStr = document.getElementById('chartDateFrom').value;
