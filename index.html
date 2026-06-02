@@ -189,8 +189,6 @@ body.edit-mode .add-reward-btn{display:flex}
 .pw-box .pw-err{color:#A32D2D;font-size:12px;margin-top:10px;min-height:18px}
 
 </style>
-<!-- SheetJS CDN - 用于生成真正的xlsx文件 -->
-<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
 
 <!-- 导出日期范围选择弹窗样式 -->
 <style>
@@ -1294,10 +1292,10 @@ function closeExportDate() {
 function confirmExportDate() {
   var from = document.getElementById('expDateFrom').value;
   var to = document.getElementById('expDateTo').value;
+  var cb = _exportDateCallback;
   closeExportDate();
-  if (_exportDateCallback) {
-    _exportDateCallback(from || null, to || null);
-    _exportDateCallback = null;
+  if (cb) {
+    cb(from || null, to || null);
   }
 }
 
@@ -1307,199 +1305,129 @@ function getWeekDay(dateStr) {
   return '星期' + days[new Date(dateStr).getDay()];
 }
 
-// ========== 新的导出 Excel（多Sheet） ==========
+// ========== 导出 Excel（纯XML，不依赖外部库） ==========
 function exportExcel() {
   document.getElementById('exportMenu').classList.remove('show');
-  // 检查 xlsx 是否加载
-  if (typeof XLSX === 'undefined') {
-    showToast('正在加载导出组件，请稍候...', 'plus-toast');
-    var s = document.createElement('script');
-    s.src = 'https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js';
-    s.onload = function() { doExportExcelWithDate(); };
-    s.onerror = function() { showToast('加载导出组件失败，请检查网络', 'minus-toast'); };
-    document.head.appendChild(s);
-  } else {
-    doExportExcelWithDate();
-  }
-}
-
-function doExportExcelWithDate() {
   showExportDateRange(function(from, to) {
     doExportExcel(from, to);
   });
 }
 
 function doExportExcel(fromDate, toDate) {
-  var wb = XLSX.utils.book_new();
-
-  // ---------- Sheet1：积分规则 ----------
   var WEEK_DAYS = ['日','一','二','三','四','五','六'];
-  function _getWeekDay(ds) {
-    return '星期' + WEEK_DAYS[new Date(ds).getDay()];
-  }
+  function _wd(ds) { return '星期' + WEEK_DAYS[new Date(ds).getDay()]; }
+  function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-  // 规则Sheet数据
-  var ruleHeaders = ['类型', '标签', '规则名称', '说明', '分值'];
-  var ruleRows = [ruleHeaders];
+  var xml = '<?xml version="1.0" encoding="UTF-8"?>\r\n';
+  xml += '<?mso-application progid="Excel.Sheet"?>\r\n';
+  xml += '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"\r\n';
+  xml += ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\r\n';
+  xml += '<Styles>\r\n';
+  xml += ' <Style ss:ID="hd"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#185FA5" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>\r\n';
+  xml += ' <Style ss:ID="sm"><Font ss:Bold="1"/><Interior ss:Color="#FFF2CC" ss:Pattern="Solid"/></Style>\r\n';
+  xml += ' <Style ss:ID="rw"><Font ss:Bold="1" ss:Color="#C00000"/><Interior ss:Color="#FCE4EC" ss:Pattern="Solid"/></Style>\r\n';
+  xml += ' <Style ss:ID="gn"><Font ss:Bold="1" ss:Color="#2E7D32"/><Interior ss:Color="#E8F5E9" ss:Pattern="Solid"/></Style>\r\n';
+  xml += '</Styles>\r\n';
 
-  // 奖励规则
+  // ===== Sheet1：积分规则 =====
+  xml += '<Worksheet ss:Name="积分规则"><Table ss:DefaultColumnWidth="80">\r\n';
+  xml += '<Column ss:Width="60"/><Column ss:Width="60"/><Column ss:Width="140"/><Column ss:Width="220"/><Column ss:Width="60"/>\r\n';
+  xml += '<Row ss:StyleID="hd"><Cell><Data ss:Type="String">类型</Data></Cell><Cell><Data ss:Type="String">标签</Data></Cell><Cell><Data ss:Type="String">规则名称</Data></Cell><Cell><Data ss:Type="String">说明</Data></Cell><Cell><Data ss:Type="String">分值</Data></Cell></Row>\r\n';
   rewardRules.forEach(function(r) {
-    ruleRows.push(['🏆 奖励', r.tag || '', r.name, r.desc || '', r.pts > 0 ? '+' + r.pts : r.pts]);
+    xml += '<Row><Cell><Data ss:Type="String">奖励</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.tag) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.name) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.desc) + '</Data></Cell><Cell><Data ss:Type="String">' + (r.pts > 0 ? '+' : '') + r.pts + '</Data></Cell></Row>\r\n';
   });
-  // 惩罚规则
   penaltyRules.forEach(function(r) {
-    ruleRows.push(['⚠️ 惩罚', r.tag || '', r.name, r.desc || '', r.pts > 0 ? '+' + r.pts : r.pts]);
+    xml += '<Row><Cell><Data ss:Type="String">惩罚</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.tag) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.name) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.desc) + '</Data></Cell><Cell><Data ss:Type="String">' + (r.pts > 0 ? '+' : '') + r.pts + '</Data></Cell></Row>\r\n';
   });
-  // 兑换奖励
   redeemRewards.forEach(function(r) {
-    ruleRows.push(['🎁 兑换', r.tag || '', r.name, r.desc || '', '消耗' + r.cost + '分']);
+    xml += '<Row><Cell><Data ss:Type="String">兑换</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.tag) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.name) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.desc) + '</Data></Cell><Cell><Data ss:Type="String">消耗' + r.cost + '分</Data></Cell></Row>\r\n';
   });
+  xml += '</Table></Worksheet>\r\n';
 
-  var ws1 = XLSX.utils.aoa_to_sheet(ruleRows);
-  ws1['!cols'] = [{wch:10},{wch:10},{wch:24},{wch:36},{wch:10}];
-  // 设置样式（通过单元格属性，xlsx写文件时保留）
-  applyHeaderStyle(ws1, ruleHeaders.length);
-  XLSX.utils.book_append_sheet(wb, ws1, '积分规则');
-
-  // ---------- Sheet2：积分明细 ----------
-  // 筛选日期范围
+  // ===== Sheet2：积分明细（全量数据） =====
   var filteredRecords = records.filter(function(r) {
     if (fromDate && r.date < fromDate) return false;
     if (toDate && r.date > toDate) return false;
     return true;
   });
-  // 按日期排序
-  filteredRecords.sort(function(a, b) { return a.date.localeCompare(b.date); });
+  filteredRecords.sort(function(a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
 
-  var detailHeaders = ['日期', '星期', '事项/行为', '分值', '类型', '标签'];
-  var detailRows = [detailHeaders];
-  var runningTotal = 0;
+  var totalReward = 0, totalPenalty = 0;
   filteredRecords.forEach(function(r) {
-    runningTotal += r.pts;
-    var type = r.pts > 0 ? '奖励' : '扣分';
-    detailRows.push([
-      r.date,
-      _getWeekDay(r.date),
-      r.name,
-      r.pts > 0 ? '+' + r.pts : '' + r.pts,
-      type,
-      r.tag || ''
-    ]);
+    if (r.pts > 0) totalReward += r.pts; else totalPenalty += r.pts;
   });
-  // 汇总行
-  var totalPts = filteredRecords.reduce(function(s, r) { return s + r.pts; }, 0);
-  var totalReward = filteredRecords.filter(function(r){return r.pts>0;}).reduce(function(s,r){return s+r.pts;},0);
-  var totalPenalty = filteredRecords.filter(function(r){return r.pts<0;}).reduce(function(s,r){return s+r.pts;},0);
-  detailRows.push([]);
-  detailRows.push(['汇总', '', '', '', '', '']);
-  detailRows.push(['奖励合计', '', '', '+' + totalReward, '奖励', '']);
-  detailRows.push(['扣分合计', '', '', '' + totalPenalty, '扣分', '']);
-  detailRows.push(['净积分', '', '', '' + totalPts, '', '']);
+  var totalPts = totalReward + totalPenalty;
 
-  var ws2 = XLSX.utils.aoa_to_sheet(detailRows);
-  ws2['!cols'] = [{wch:12},{wch:10},{wch:28},{wch:10},{wch:8},{wch:10}];
-  applyHeaderStyle(ws2, detailHeaders.length);
-  XLSX.utils.book_append_sheet(wb, ws2, '积分明细');
+  xml += '<Worksheet ss:Name="积分明细"><Table ss:DefaultColumnWidth="80">\r\n';
+  xml += '<Column ss:Width="80"/><Column ss:Width="60"/><Column ss:Width="150"/><Column ss:Width="50"/><Column ss:Width="40"/><Column ss:Width="60"/>\r\n';
+  xml += '<Row ss:StyleID="hd"><Cell><Data ss:Type="String">日期</Data></Cell><Cell><Data ss:Type="String">星期</Data></Cell><Cell><Data ss:Type="String">事项/行为</Data></Cell><Cell><Data ss:Type="String">分值</Data></Cell><Cell><Data ss:Type="String">类型</Data></Cell><Cell><Data ss:Type="String">标签</Data></Cell></Row>\r\n';
+  filteredRecords.forEach(function(r) {
+    var tp = r.pts > 0 ? '奖励' : '扣分';
+    xml += '<Row><Cell><Data ss:Type="String">' + _esc(r.date) + '</Data></Cell><Cell><Data ss:Type="String">' + _wd(r.date) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.name) + '</Data></Cell><Cell><Data ss:Type="Number">' + r.pts + '</Data></Cell><Cell><Data ss:Type="String">' + tp + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.tag) + '</Data></Cell></Row>\r\n';
+  });
+  xml += '<Row ss:StyleID="sm"><Cell><Data ss:Type="String">奖励合计</Data></Cell><Cell></Cell><Cell></Cell><Cell><Data ss:Type="Number">' + totalReward + '</Data></Cell><Cell><Data ss:Type="String">奖励</Data></Cell><Cell></Cell></Row>\r\n';
+  xml += '<Row ss:StyleID="rw"><Cell><Data ss:Type="String">扣分合计</Data></Cell><Cell></Cell><Cell></Cell><Cell><Data ss:Type="Number">' + totalPenalty + '</Data></Cell><Cell><Data ss:Type="String">扣分</Data></Cell><Cell></Cell></Row>\r\n';
+  xml += '<Row ss:StyleID="gn"><Cell><Data ss:Type="String">净积分</Data></Cell><Cell></Cell><Cell></Cell><Cell><Data ss:Type="Number">' + totalPts + '</Data></Cell><Cell></Cell><Cell></Cell></Row>\r\n';
+  xml += '</Table></Worksheet>\r\n';
 
-  // ---------- Sheet3：兑换奖励明细 ----------
+  // ===== Sheet3：兑换奖励明细 =====
   var filteredRedeem = redeemHistory.filter(function(h) {
     if (fromDate && h.date < fromDate) return false;
     if (toDate && h.date > toDate) return false;
     return true;
   });
-  filteredRedeem.sort(function(a, b) { return a.date.localeCompare(b.date); });
+  filteredRedeem.sort(function(a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+  var totalCost = 0;
+  filteredRedeem.forEach(function(h) { totalCost += h.cost; });
 
-  var redeemHeaders = ['日期', '星期', '兑换内容', '消耗积分', '类型'];
-  var redeemRows = [redeemHeaders];
+  xml += '<Worksheet ss:Name="兑换明细"><Table ss:DefaultColumnWidth="80">\r\n';
+  xml += '<Column ss:Width="80"/><Column ss:Width="60"/><Column ss:Width="170"/><Column ss:Width="60"/><Column ss:Width="80"/>\r\n';
+  xml += '<Row ss:StyleID="hd"><Cell><Data ss:Type="String">日期</Data></Cell><Cell><Data ss:Type="String">星期</Data></Cell><Cell><Data ss:Type="String">兑换内容</Data></Cell><Cell><Data ss:Type="Number">消耗积分</Data></Cell><Cell><Data ss:Type="String">类型</Data></Cell></Row>\r\n';
   filteredRedeem.forEach(function(h) {
-    redeemRows.push([
-      h.date,
-      _getWeekDay(h.date),
-      h.title,
-      -h.cost,
-      h.type || '奖励兑换'
-    ]);
+    xml += '<Row><Cell><Data ss:Type="String">' + _esc(h.date) + '</Data></Cell><Cell><Data ss:Type="String">' + _wd(h.date) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(h.title) + '</Data></Cell><Cell><Data ss:Type="Number">' + (-h.cost) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(h.type || '奖励兑换') + '</Data></Cell></Row>\r\n';
   });
-  redeemRows.push([]);
-  var totalCost = filteredRedeem.reduce(function(s, h) { return s + (-h.cost); }, 0);
-  redeemRows.push(['消耗积分合计', '', '', totalCost, '']);
+  xml += '<Row ss:StyleID="rw"><Cell><Data ss:Type="String">消耗积分合计</Data></Cell><Cell></Cell><Cell></Cell><Cell><Data ss:Type="Number">' + (-totalCost) + '</Data></Cell><Cell></Cell></Row>\r\n';
+  xml += '</Table></Worksheet>\r\n';
 
-  var ws3 = XLSX.utils.aoa_to_sheet(redeemRows);
-  ws3['!cols'] = [{wch:12},{wch:10},{wch:32},{wch:12},{wch:12}];
-  applyHeaderStyle(ws3, redeemHeaders.length);
-  XLSX.utils.book_append_sheet(wb, ws3, '兑换明细');
+  // ===== Sheet4：打印模板（行=积分规则，列=日期/星期留空） =====
+  var allRules = [];
+  rewardRules.forEach(function(r) { allRules.push({tag:r.tag||'', name:r.name, pts:r.pts}); });
+  penaltyRules.forEach(function(r) { allRules.push({tag:r.tag||'', name:r.name, pts:r.pts}); });
 
-  // ---------- 生成文件并下载 ----------
+  xml += '<Worksheet ss:Name="打印模板"><Table ss:DefaultColumnWidth="60" ss:DefaultRowHeight="20">\r\n';
+  xml += '<Column ss:Width="40"/><Column ss:Width="50"/><Column ss:Width="120"/><Column ss:Width="40"/>\r\n';
+  for (var dd = 1; dd <= 31; dd++) {
+    xml += '<Column ss:Width="50"/><Column ss:Width="40"/>\r\n';
+  }
+  // 表头
+  xml += '<Row ss:StyleID="hd"><Cell><Data ss:Type="String">序号</Data></Cell><Cell><Data ss:Type="String">标签</Data></Cell><Cell><Data ss:Type="String">规则名称</Data></Cell><Cell><Data ss:Type="String">分值</Data></Cell>';
+  for (var d = 1; d <= 31; d++) {
+    xml += '<Cell><Data ss:Type="String">日期' + d + '</Data></Cell><Cell><Data ss:Type="String">星期</Data></Cell>';
+  }
+  xml += '</Row>\r\n';
+  // 每条规则一行
+  allRules.forEach(function(r, idx) {
+    xml += '<Row><Cell><Data ss:Type="Number">' + (idx+1) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.tag) + '</Data></Cell><Cell><Data ss:Type="String">' + _esc(r.name) + '</Data></Cell><Cell><Data ss:Type="String">' + (r.pts > 0 ? '+' : '') + r.pts + '</Data></Cell>';
+    for (var dd = 0; dd < 62; dd++) {
+      xml += '<Cell></Cell>';
+    }
+    xml += '</Row>\r\n';
+  });
+  // 签名行
+  xml += '<Row><Cell ss:MergeAcross="1"><Data ss:Type="String">家长签名：__________</Data></Cell><Cell ss:MergeAcross="' + (64) + '"></Cell></Row>\r\n';
+  xml += '<Row><Cell ss:MergeAcross="1"><Data ss:Type="String">孩子签名：__________</Data></Cell><Cell ss:MergeAcross="' + (64) + '"></Cell></Row>\r\n';
+  xml += '</Table></Worksheet>\r\n';
+
+  xml += '</Workbook>';
+
+  // 下载
   var rangeLabel = (fromDate || '起始') + '至' + (toDate || '今日');
-  var fileName = (load('kidName','') || '积分奖惩表') + '_' + rangeLabel + '.xlsx';
-  XLSX.writeFile(wb, fileName);
+  var fileName = (load('kidName','') || '积分奖惩表') + '_' + rangeLabel + '.xls';
+  downloadFile(xml, fileName, 'application/vnd.ms-excel;charset=utf-8');
   showToast('Excel 已导出（' + rangeLabel + '）', 'plus-toast');
 }
 
-// ========== 辅助：设置表头样式（通过单元格对象） ==========
-function applyHeaderStyle(ws, colCount) {
-  // xlsx库支持通过 !rows 和单元格属性设置基础样式
-  // 这里用基础方式：确保表头行加粗
-  var range = XLSX.utils.decode_range(ws['!ref']);
-  for (var C = range.s.c; C <= range.e.c; C++) {
-    var cellAddr = XLSX.utils.encode_cell({r:0, c:C});
-    if (!ws[cellAddr]) continue;
-    ws[cellAddr].s = ws[cellAddr].s || {};
-    ws[cellAddr].s.font = { bold: true, color: { rgb: 'FFFFFF' } };
-    ws[cellAddr].s.fill = { fgColor: { rgb: '185FA5' } };
-    ws[cellAddr].s.alignment = { horizontal: 'center', vertical: 'center' };
-  }
-}
-
-// ========== 新的导出 CSV（也加日期范围） ==========
-function exportCSV() {
-  document.getElementById('exportMenu').classList.remove('show');
-  showExportDateRange(function(from, to) {
-    doExportCSV(from, to);
-  });
-}
-
-function doExportCSV(fromDate, toDate) {
-  var BOM = '\uFEFF';
-  var lines = [];
-  var dName = load('kidName','') || '';
-  lines.push(dName + '积分奖惩表');
-  lines.push('导出范围：' + (fromDate||'起始') + ' ~ ' + (toDate||'今日'));
-  lines.push('');
-
-  // 积分明细
-  var recs = records.filter(function(r) {
-    if (fromDate && r.date < fromDate) return false;
-    if (toDate && r.date > toDate) return false;
-    return true;
-  });
-  lines.push('=== 积分明细 ===');
-  lines.push('日期,星期,事项,分值,类型,标签');
-  recs.forEach(function(r) {
-    var wd = getWeekDay(r.date);
-    var type = r.pts > 0 ? '奖励' : '扣分';
-    lines.push(r.date + ',' + wd + ',"' + r.name.replace(/"/g,'""') + '",' + r.pts + ',' + type + ',' + (r.tag||''));
-  });
-  lines.push('');
-
-  // 兑换明细
-  var rhs = redeemHistory.filter(function(h) {
-    if (fromDate && h.date < fromDate) return false;
-    if (toDate && h.date > toDate) return false;
-    return true;
-  });
-  lines.push('=== 兑换明细 ===');
-  lines.push('日期,星期,兑换内容,消耗积分');
-  rhs.forEach(function(h) {
-    lines.push(h.date + ',' + getWeekDay(h.date) + ',"' + h.title.replace(/"/g,'""') + '",' + (-h.cost));
-  });
-
-  var csv = BOM + lines.join('\n');
-  var rangeLabel = (fromDate||'起始') + '至' + (toDate||'今日');
-  downloadFile(csv, (dName||'积分奖惩表') + '_' + rangeLabel + '.csv', 'text/csv;charset=utf-8');
-  showToast('CSV 已导出', 'plus-toast');
-}
-function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// ========== 导出 CSV（也加日期范围） ==========function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function downloadFile(content, filename, mime) {
   var blob = new Blob([content], { type: mime });
