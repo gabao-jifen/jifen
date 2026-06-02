@@ -1435,11 +1435,11 @@ function doExportExcel(fromDate, toDate) {
   else if (toDate) rangeLabel = '至' + toDate;
 
   var h = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>';
-  h += 'td{mso-number-format:"\\@";border:1px solid #ccc;padding:4px 8px;font-size:13px}';
-  h += '.hd{background:#185FA5;color:#fff;font-weight:bold;text-align:center}';
-  h += '.sm{background:#FFF2CC;font-weight:bold}';
-  h += '.rw{background:#FCE4EC;font-weight:bold;color:#C00000}';
-  h += '.gn{background:#E8F5E9;font-weight:bold;color:#2E7D32}';
+  h += 'td{border:1px solid #ddd;padding:4px 8px;font-size:13px;color:#333}';
+  h += '.hd{background:#4472C4;color:#fff;font-weight:bold;text-align:center}';
+  h += '.rw{background:#FFEEEE}';
+  h += '.gn{background:#E8F5E9}';
+  h += '.sm{background:#FFF8E1}';
   h += '.nm{mso-number-format:"General"}';
   h += '</style></head><body>';
 
