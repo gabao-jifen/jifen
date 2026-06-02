@@ -223,12 +223,8 @@ body.edit-mode .add-reward-btn{display:flex}
       <span class="title-icon">&#9733;</span><span id="titleText">小朋友</span>积分奖惩表
       <span class="title-edit-hint">点击修改</span>
     
-  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-    <button onclick="exportExcel()" style="padding:5px 12px;font-size:12px;border:1px solid #D8C5B5;border-radius:6px;background:#FFF8F0;color:#7A4A1A;cursor:pointer;margin-right:6px">导出Excel</button>
-    <button onclick="document.getElementById('importFileInput').click()" style="padding:5px 12px;font-size:12px;border:1px solid #85B7EB;border-radius:6px;background:#F0F5FB;color:#185FA5;cursor:pointer">导入数据</button>
-    <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(this)">
-  </div>
 </div>
+
     <div id="titleEditRow" style="display:none;align-items:center;gap:8px">
       <span class="title-icon">&#9733;</span><input class="title-input" id="titleInput" type="text" maxlength="20" placeholder="输入小朋友的名字" onkeydown="if(event.key==='Enter')saveTitle();if(event.key==='Escape')cancelEditTitle()">
       <span style="font-size:14px;color:#5F5E5A">积分奖惩表</span>
@@ -236,28 +232,22 @@ body.edit-mode .add-reward-btn{display:flex}
       <button class="edit-toggle" style="padding:4px 12px;font-size:12px" onclick="cancelEditTitle()">取消</button>
     </div>
     <div class="header-right">
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+        <button onclick="exportData()" style="padding:5px 12px;font-size:12px;border:1px solid #D3D1C7;border-radius:6px;background:#F9F8F5;color:#5F5E5A;cursor:pointer">导出数据</button>
+        <button onclick="document.getElementById('importFileInput').click()" style="padding:5px 12px;font-size:12px;border:1px solid #85B7EB;border-radius:6px;background:#F0F5FB;color:#185FA5;cursor:pointer">导入数据</button>
+        <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(this)">
+      </div>
       <div class="score-board">
         <div class="score-card"><div class="score-label">今日得分</div><div class="score-val plus" id="todayScore">+0</div></div>
         <div class="score-card"><div class="score-label">今日扣分</div><div class="score-val minus" id="todayMinus">-0</div></div>
         <div class="score-card"><div class="score-label">本月累计</div><div class="score-val total" id="totalScore">0</div></div>
         <div class="score-card" style="border-color:#97C459;background:linear-gradient(135deg,#FCFFF7,#F5FBF0)"><div class="score-label">总积分</div><div class="score-val" id="allTimeTotal" style="color:#27500A">0</div></div>
       </div>
-      <button class="edit-toggle" id="editToggle" onclick="toggleEditMode()">&#9998; 编辑规则</button>
-    </div>
-  </div>
-
-  <div class="chart-wrap" style="margin-bottom:20px">
-    <div class="chart-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-      <span>&#128200; 每日积分趋势</span>
-      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-        <input type="date" id="chartDateFrom" onchange="renderChart()" style="font-size:12px;padding:3px 8px;border:1px solid #e8e7e2;border-radius:6px;outline:none">
-        <span style="font-size:13px;color:#888780">至</span>
-        <input type="date" id="chartDateTo" max="" onchange="renderChart()" style="font-size:12px;padding:3px 8px;border:1px solid #e8e7e2;border-radius:6px;outline:none">
-        <div class="chart-legend" id="trendChartLegend" style="display:none;margin:0">
-          <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#185FA5"></div>当日积分</div>
-          <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#BA7517"></div>零分基准</div>
-        </div>
+      <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="edit-toggle" id="editToggle" onclick="toggleEditMode()">&#9998; 编辑规则</button>
+        <button onclick="exportExcel()" style="padding:5px 12px;font-size:12px;border:1px solid #D8C5B5;border-radius:6px;background:#FFF8F0;color:#7A4A1A;cursor:pointer">导出Excel</button>
       </div>
+    </div>
     </div>
     <div class="chart-container" id="trendChartContainer">
       <div class="chart-empty" id="trendChartEmpty">暂无数据，记录积分后即可查看趋势</div>
@@ -1334,45 +1324,6 @@ function renderTrendLine(days) {
 
 init();
 
-// ========== 数据导入 ==========
-function importData(input) {
-  var file = input.files[0];
-  if (!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      var data = JSON.parse(e.target.result);
-      if (!data.appName || data.appName !== '积分奖惩表') {
-        showToast('文件格式不正确', 'minus-toast');
-        return;
-      }
-      showConfirm('导入将覆盖当前所有数据，确认继续？', function(ok) {
-        if (!ok) { input.value = ''; return; }
-        if (data.kidName !== undefined) localStorage.setItem('kidName', data.kidName);
-        if (data.kidRewardRules) localStorage.setItem('kidRewardRules', JSON.stringify(data.kidRewardRules));
-        if (data.kidPenaltyRules) localStorage.setItem('kidPenaltyRules', JSON.stringify(data.kidPenaltyRules));
-        if (data.kidPointsRecords) localStorage.setItem('kidPointsRecords', JSON.stringify(data.kidPointsRecords));
-        if (data.kidRedeemHistory) localStorage.setItem('kidRedeemHistory', JSON.stringify(data.kidRedeemHistory));
-        if (data.kidRedeemRewards) localStorage.setItem('kidRedeemRewards', JSON.stringify(data.kidRedeemRewards));
-        // 重新初始化
-        if (typeof load === 'function') { kidName = localStorage.getItem('kidName') || ''; }
-        rewardRules = JSON.parse(localStorage.getItem('kidRewardRules') || '[]');
-        penaltyRules = JSON.parse(localStorage.getItem('kidPenaltyRules') || '[]');
-        records = JSON.parse(localStorage.getItem('kidPointsRecords') || '[]');
-        redeemHistory = JSON.parse(localStorage.getItem('kidRedeemHistory') || '[]');
-        redeemRewards = JSON.parse(localStorage.getItem('kidRedeemRewards') || '[]');
-        init();
-        showToast('数据已导入（导出时间：' + (data.exportDate||'').slice(0,10) + '）', 'plus-toast');
-        input.value = '';
-      });
-    } catch(ex) {
-      showToast('文件解析失败：' + ex.message, 'minus-toast');
-      input.value = '';
-    }
-  };
-  reader.readAsText(file);
-}
-// =======================================
 
 
 
@@ -1421,6 +1372,60 @@ function confirmExportDate() {
 
 function exportExcel() {
   showExportDateRange(function(from, to) { doExportExcel(from, to); });
+}
+
+
+
+function exportData() {
+  var data = {
+    exportDate: new Date().toISOString(),
+    rewardRules: rewardRules,
+    penaltyRules: penaltyRules,
+    records: records,
+    redeemHistory: redeemHistory,
+    kidName: kidName
+  };
+  var json = JSON.stringify(data, null, 2);
+  var blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+  var link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = (kidName || '积分奖惩表') + '_数据_' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+  showToast('数据已导出（可跨终端导入）', 'plus-toast');
+}
+
+function importData(input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = JSON.parse(e.target.result);
+      if (!data.records && !data.rewardRules) throw new Error('无效的数据文件');
+      showConfirm('导入将覆盖当前所有数据，是否继续？', function(ok) {
+        if (!ok) { input.value = ''; return; }
+        if (data.rewardRules) { rewardRules = data.rewardRules; save('kidRewardRules', rewardRules); }
+        if (data.penaltyRules) { penaltyRules = data.penaltyRules; save('kidPenaltyRules', penaltyRules); }
+        if (data.records) { records = data.records; save('kidPointsRecords', records); }
+        if (data.redeemHistory) { redeemHistory = data.redeemHistory; save('kidRedeemHistory', redeemHistory); }
+        if (data.kidName) { kidName = data.kidName; save('kidName', kidName); document.getElementById('titleText').textContent = kidName; }
+        updateScores();
+        renderRules();
+        renderLog();
+        renderChart();
+        renderRedeem();
+        renderRedeemHistory();
+        showToast('数据已导入（导出时间：' + (data.exportDate||'').slice(0,10) + '）', 'plus-toast');
+        input.value = '';
+      });
+    } catch(err) {
+      showToast('导入失败：' + err.message, 'minus-toast');
+      input.value = '';
+    }
+  };
+  reader.readAsText(input.files[0]);
 }
 
 function doExportExcel(fromDate, toDate) {
