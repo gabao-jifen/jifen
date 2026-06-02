@@ -15,7 +15,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .title-edit-hint{font-size:11px;color:#888780;font-weight:400;opacity:0;margin-left:6px;transition:opacity 0.15s}
 .title:hover .title-edit-hint{opacity:1}
 .title-input{font-size:18px;font-weight:600;color:#2C2C2A;border:1px solid #85B7EB;border-radius:8px;padding:2px 8px;outline:none;background:#fff;width:220px}
-.header-right{display:flex;gap:8px;align-items:center}
+.header-right{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
 .edit-toggle{background:none;border:1px solid #d3d1c7;border-radius:8px;padding:6px 14px;font-size:13px;color:#5F5E5A;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:4px}
 .edit-toggle:hover{border-color:#185FA5;color:#185FA5}
 .edit-toggle.active{background:#185FA5;color:#fff;border-color:#185FA5}
@@ -243,7 +243,7 @@ body.edit-mode .add-reward-btn{display:flex}
         <div class="score-card"><div class="score-label">本月累计</div><div class="score-val total" id="totalScore">0</div></div>
         <div class="score-card" style="border-color:#97C459;background:linear-gradient(135deg,#FCFFF7,#F5FBF0)"><div class="score-label">总积分</div><div class="score-val" id="allTimeTotal" style="color:#27500A">0</div></div>
       </div>
-      <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;align-items:flex-start">
         <button class="edit-toggle" id="editToggle" onclick="toggleEditMode()">&#9998; 编辑规则</button>
         <button onclick="exportExcel()" style="padding:5px 12px;font-size:12px;border:1px solid #D8C5B5;border-radius:6px;background:#FFF8F0;color:#7A4A1A;cursor:pointer">导出Excel</button>
       </div>
