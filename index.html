@@ -160,6 +160,22 @@ body.edit-mode .add-reward-btn{display:flex}
 .chart-legend-dot{width:10px;height:10px;border-radius:50%}
 .chart-empty{text-align:center;padding:30px;color:#888780;font-size:13px}
 
+
+/* 兑换现金样式 */
+.cash-redeem-box{background:linear-gradient(135deg,#FFF8D6,#FFF3C4);border:2px solid #E8D44D;border-radius:14px;padding:18px 16px;margin-bottom:18px}
+.cash-redeem-title{font-size:15px;font-weight:600;color:#7A6B00;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.cash-redeem-desc{font-size:12px;color:#A39000;margin-bottom:14px}
+.cash-redeem-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cash-redeem-row label{font-size:14px;color:#5F5E5A;white-space:nowrap}
+.cash-redeem-input{width:100px;padding:8px 12px;border:1px solid #E8D44D;border-radius:8px;font-size:16px;font-weight:600;outline:none;background:#fff;text-align:center}
+.cash-redeem-input:focus{border-color:#BA7517;box-shadow:0 0 0 2px rgba(186,117,23,0.15)}
+.cash-redeem-eq{font-size:14px;color:#5F5E5A}
+.cash-redeem-yuan{font-size:16px;font-weight:600;color:#BA7517}
+.cash-redeem-btn{background:#BA7517;color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.15s;white-space:nowrap}
+.cash-redeem-btn:hover{background:#854F0B}
+.cash-redeem-btn:disabled{background:#F5F5F0 !important;color:#A32D2D !important;cursor:not-allowed;font-weight:600;border:1px solid #D3D1C7}
+.cash-available{font-size:12px;color:#A39000;margin-top:8px}
+
 /* 密码门样式 */
 #pwGate{position:fixed;top:0;left:0;width:100%;height:100%;background:#f5f4f0;z-index:99999;display:flex;align-items:center;justify-content:center}
 #pwGate.pw-hidden{display:none}
@@ -207,6 +223,7 @@ body.edit-mode .add-reward-btn{display:flex}
         <div class="score-card"><div class="score-label">今日得分</div><div class="score-val plus" id="todayScore">+0</div></div>
         <div class="score-card"><div class="score-label">今日扣分</div><div class="score-val minus" id="todayMinus">-0</div></div>
         <div class="score-card"><div class="score-label">本月累计</div><div class="score-val total" id="totalScore">0</div></div>
+        <div class="score-card" style="border-color:#97C459;background:linear-gradient(135deg,#FCFFF7,#F5FBF0)"><div class="score-label">总积分</div><div class="score-val" id="allTimeTotal" style="color:#27500A">0</div></div>
       </div>
       <button class="edit-toggle" id="editToggle" onclick="toggleEditMode()">&#9998; 编辑规则</button>
       <div style="position:relative;display:inline-block">
@@ -286,6 +303,18 @@ body.edit-mode .add-reward-btn{display:flex}
   </div>
 
   <div id="tab-redeem" class="panel">
+    <div class="cash-redeem-box" id="cashRedeemBox">
+      <div class="cash-redeem-title">&#128176; 兑换现金</div>
+      <div class="cash-redeem-desc">1积分 = 1元，可自由兑换任意积分数量的现金</div>
+      <div class="cash-redeem-row">
+        <label>兑换</label>
+        <input type="number" class="cash-redeem-input" id="cashInput" min="1" placeholder="积分数" oninput="updateCashDisplay()">
+        <span class="cash-redeem-eq">积分 =</span>
+        <span class="cash-redeem-yuan" id="cashYuan">&#165;0</span>
+        <button class="cash-redeem-btn" id="cashRedeemBtn" onclick="doCashRedeem()" disabled>确认兑换</button>
+      </div>
+      <div class="cash-available" id="cashAvailable">当前可用积分：0</div>
+    </div>
     <p class="click-hint" style="margin-bottom:16px">累计积分达到目标即可兑换奖励，兑换后自动扣除对应积分</p>
     <div class="redeem-list" id="redeemList"></div>
     <div class="add-reward-btn" onclick="openRewardModal()" style="margin-top:14px">+ 添加兑换奖励</div>
@@ -864,6 +893,9 @@ function updateScores() {
   document.getElementById('todayScore').textContent = '+' + fmtNum(todayP);
   document.getElementById('todayMinus').textContent = '-' + fmtNum(todayM);
   document.getElementById('totalScore').textContent = fmtNum(total);
+  var allEarn = records.reduce(function(s, r) { return s + r.pts; }, 0);
+  var allRedeem = redeemHistory.reduce(function(s, h) { return s + h.cost; }, 0);
+  document.getElementById('allTimeTotal').textContent = fmtNum(allEarn - allRedeem);
 }
 
 function renderLog() {
@@ -948,6 +980,7 @@ function renderRedeem() {
   }
   document.getElementById('redeemList').innerHTML = html;
   renderRedeemHistory();
+  updateCashDisplay();
 }
 
 function doRedeem(rwId) {
@@ -965,6 +998,41 @@ function doRedeem(rwId) {
   renderLog();
   renderRedeem();
   showToast('兑换成功！' + rw.title + '，扣除 ' + rw.score + ' 分', 'plus-toast');
+}
+
+function doCashRedeem() {
+  var m = monthStr();
+  var total = records.filter(function(r) { return r.date.startsWith(m); }).reduce(function(s, r) { return s + r.pts; }, 0)
+    - redeemHistory.filter(function(h) { return h.month === m; }).reduce(function(s, h) { return s + h.cost; }, 0);
+  var input = document.getElementById('cashInput');
+  var pts = parseInt(input.value) || 0;
+  if (pts <= 0) { showToast('请输入有效的积分数', 'minus-toast'); return; }
+  if (pts > total) { showToast('可用积分不足，当前仅有 ' + total + ' 分', 'minus-toast'); return; }
+  showConfirm('确认兑换 ' + pts + ' 积分（即 ¥' + pts + '）？', function(ok) {
+    if (!ok) return;
+    redeemHistory.push({ month: m, rwId: '__cash__', title: '兑换现金 ¥' + pts, cost: pts, date: todayStr(), id: uid(), badgeLabel: '现金', badge: 'c5' });
+    save('kidRedeemHistory', redeemHistory);
+    input.value = '';
+    updateScores();
+    renderLog();
+    renderRedeem();
+    renderChart();
+    showToast('兑换成功！¥' + pts + ' 现金，扣除 ' + pts + ' 分', 'plus-toast');
+  });
+}
+
+function updateCashDisplay() {
+  var input = document.getElementById('cashInput');
+  var pts = parseInt(input.value) || 0;
+  var yuan = document.getElementById('cashYuan');
+  var btn = document.getElementById('cashRedeemBtn');
+  var available = document.getElementById('cashAvailable');
+  var m = monthStr();
+  var total = records.filter(function(r) { return r.date.startsWith(m); }).reduce(function(s, r) { return s + r.pts; }, 0)
+    - redeemHistory.filter(function(h) { return h.month === m; }).reduce(function(s, h) { return s + h.cost; }, 0);
+  yuan.textContent = '\u00A5' + pts;
+  btn.disabled = pts <= 0 || pts > total;
+  available.textContent = '当前可用积分：' + total;
 }
 
 function renderRedeemHistory() {
