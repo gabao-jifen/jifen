@@ -182,6 +182,24 @@ body.edit-mode .add-reward-btn{display:flex}
 
 
 
+
+/* 导出按钮和日期弹窗样式 */
+.export-btn-wrap{display:inline-block;position:relative}
+.export-btn{background:#fff;border:1px solid #d3d1c7;border-radius:8px;padding:6px 14px;font-size:13px;color:#5F5E5A;cursor:pointer;transition:all 0.15s}
+.export-btn:hover{border-color:#185FA5;color:#185FA5}
+.export-date-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:9999;align-items:center;justify-content:center}
+.export-date-overlay.show{display:flex}
+.export-date-box{background:#fff;border-radius:16px;padding:28px 24px;max-width:380px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.18)}
+.export-date-box h3{font-size:16px;font-weight:600;margin-bottom:16px;color:#2C2C2A}
+.export-date-row{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.export-date-row label{font-size:13px;color:#5F5E5A;min-width:60px}
+.export-date-row input[type="date"]{flex:1;padding:6px 10px;border:1px solid #D3D1C7;border-radius:8px;font-size:13px;color:#2C2C2A;background:#fff}
+.export-date-hint{font-size:11px;color:#888780;margin:8px 0 14px 0}
+.export-date-btns{display:flex;gap:8px;justify-content:flex-end}
+.export-date-btns button{padding:7px 18px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid #D3D1C7}
+.export-date-btns .btn-cancel{background:#fff;color:#5F5E5A}
+.export-date-btns .btn-ok{background:#185FA5;color:#fff;border-color:#185FA5}
+
 </style>
 
 
@@ -206,6 +224,7 @@ body.edit-mode .add-reward-btn{display:flex}
       <span class="title-edit-hint">点击修改</span>
     
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <button onclick="exportExcel()" style="padding:5px 12px;font-size:12px;border:1px solid #D8C5B5;border-radius:6px;background:#FFF8F0;color:#7A4A1A;cursor:pointer;margin-right:6px">导出Excel</button>
     <button onclick="document.getElementById('importFileInput').click()" style="padding:5px 12px;font-size:12px;border:1px solid #85B7EB;border-radius:6px;background:#F0F5FB;color:#185FA5;cursor:pointer">导入数据</button>
     <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(this)">
   </div>
@@ -1356,6 +1375,167 @@ function importData(input) {
 // =======================================
 
 
+
+
+// ========== 导出Excel ==========
+var _exportDateCallback = null;
+
+function showExportDateRange(callback) {
+  _exportDateCallback = callback;
+  var overlay = document.getElementById('exportDateOverlay');
+  if (!overlay) {
+    var box = document.createElement('div');
+    box.id = 'exportDateOverlay';
+    box.className = 'export-date-overlay';
+    box.innerHTML = '<div class="export-date-box">' +
+      '<h3>📊 选择导出时间范围（可选）</h3>' +
+      '<div class="export-date-row"><label>开始日期</label><input type="date" id="expDateFrom"></div>' +
+      '<div class="export-date-row"><label>结束日期</label><input type="date" id="expDateTo"></div>' +
+      '<div class="export-date-hint">不填则导出全部数据</div>' +
+      '<div class="export-date-btns">' +
+        '<button class="btn-cancel" onclick="closeExportDate()">取消</button>' +
+        '<button class="btn-ok" onclick="confirmExportDate()">确认导出</button>' +
+      '</div></div>';
+    document.body.appendChild(box);
+    box.addEventListener('click', function(e) { if (e.target === box) closeExportDate(); });
+  }
+  var today = todayStr();
+  document.getElementById('expDateFrom').value = '';
+  document.getElementById('expDateTo').value = today;
+  document.getElementById('exportDateOverlay').classList.add('show');
+}
+
+function closeExportDate() {
+  var overlay = document.getElementById('exportDateOverlay');
+  if (overlay) overlay.classList.remove('show');
+  _exportDateCallback = null;
+}
+
+function confirmExportDate() {
+  var from = document.getElementById('expDateFrom').value;
+  var to = document.getElementById('expDateTo').value;
+  var cb = _exportDateCallback;
+  closeExportDate();
+  if (cb) cb(from || null, to || null);
+}
+
+function exportExcel() {
+  showExportDateRange(function(from, to) { doExportExcel(from, to); });
+}
+
+function doExportExcel(fromDate, toDate) {
+  function _esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  var WEEK_DAYS = ['日','一','二','三','四','五','六'];
+
+  var rangeLabel = '全量数据';
+  if (fromDate && toDate) rangeLabel = fromDate + '至' + toDate;
+  else if (fromDate) rangeLabel = fromDate + '起';
+  else if (toDate) rangeLabel = '至' + toDate;
+
+  var h = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>';
+  h += 'td{mso-number-format:"\\@";border:1px solid #ccc;padding:4px 8px;font-size:13px}';
+  h += '.hd{background:#185FA5;color:#fff;font-weight:bold;text-align:center}';
+  h += '.sm{background:#FFF2CC;font-weight:bold}';
+  h += '.rw{background:#FCE4EC;font-weight:bold;color:#C00000}';
+  h += '.gn{background:#E8F5E9;font-weight:bold;color:#2E7D32}';
+  h += '.nm{mso-number-format:"General"}';
+  h += '</style></head><body>';
+
+  // ===== Sheet1: 积分规则 =====
+  h += '<table border="1" cellspacing="0" cellpadding="0"><caption><b>积分规则</b></caption>';
+  h += '<tr class="hd"><td>类型</td><td>标签</td><td>规则名称</td><td>说明</td><td>分值</td></tr>';
+  for (var i = 0; i < rewardRules.length; i++) {
+    var r = rewardRules[i];
+    h += '<tr class="gn"><td class="nm">奖励</td><td>' + _esc(r.tag||'') + '</td><td>' + _esc(r.name) + '</td><td>' + _esc(r.desc||'') + '</td><td class="nm">+' + r.pts + '</td></tr>';
+  }
+  for (var i = 0; i < penaltyRules.length; i++) {
+    var r = penaltyRules[i];
+    h += '<tr class="rw"><td class="nm">扣分</td><td>' + _esc(r.tag||'') + '</td><td>' + _esc(r.name) + '</td><td>' + _esc(r.desc||'') + '</td><td class="nm">' + r.pts + '</td></tr>';
+  }
+  h += '</table><br/>';
+
+  // ===== Sheet2: 积分明细 =====
+  var allRecs = records.slice().sort(function(a, b) {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    return a.id - b.id;
+  });
+  if (fromDate || toDate) {
+    allRecs = allRecs.filter(function(r) {
+      if (fromDate && r.date < fromDate) return false;
+      if (toDate && r.date > toDate) return false;
+      return true;
+    });
+  }
+  h += '<table border="1" cellspacing="0" cellpadding="0"><caption><b>积分明细</b></caption>';
+  h += '<tr class="hd"><td>日期</td><td>星期</td><td>事项</td><td>标签</td><td>分值</td><td>备注</td></tr>';
+  for (var i = 0; i < allRecs.length; i++) {
+    var r = allRecs[i];
+    var wd = '星期' + WEEK_DAYS[new Date(r.date).getDay()];
+    var cls = r.pts > 0 ? 'gn' : 'rw';
+    h += '<tr class="' + cls + '"><td>' + _esc(r.date) + '</td><td>' + _esc(wd) + '</td><td>' + _esc(r.name) + '</td><td>' + _esc(r.tag||'') + '</td><td class="nm">' + r.pts + '</td><td>' + _esc(r.desc||'') + '</td></tr>';
+  }
+  if (allRecs.length === 0) h += '<tr><td colspan="6" style="text-align:center;color:#999">暂无记录</td></tr>';
+  h += '</table><br/>';
+
+  // ===== Sheet3: 兑换明细 =====
+  var allRedeem = redeemHistory.slice();
+  if (fromDate || toDate) {
+    allRedeem = allRedeem.filter(function(h) {
+      if (fromDate && h.month < fromDate) return false;
+      if (toDate && h.month > toDate) return false;
+      return true;
+    });
+  }
+  h += '<table border="1" cellspacing="0" cellpadding="0"><caption><b>兑换明细</b></caption>';
+  h += '<tr class="hd"><td>月份</td><td>兑换项目</td><td>消耗积分</td><td>标签</td></tr>';
+  for (var i = 0; i < allRedeem.length; i++) {
+    var r = allRedeem[i];
+    h += '<tr class="sm"><td>' + _esc(r.month) + '</td><td>' + _esc(r.name) + '</td><td class="nm">' + r.cost + '</td><td>' + _esc(r.badgeLabel||'') + '</td></tr>';
+  }
+  if (allRedeem.length === 0) h += '<tr><td colspan="4" style="text-align:center;color:#999">暂无记录</td></tr>';
+  h += '</table><br/>';
+
+  // ===== Sheet4: 打印模板 =====
+  // 第1行：积分规则 + 31个空单元格（日期自己填）
+  // 第2行：空 + 31个"星期  "（星期几自己填）
+  // 后续行：每个规则 + 31个空单元格
+  h += '<table border="1" cellspacing="0" cellpadding="0"><caption><b>打印模板（手填用）</b></caption>';
+  // 第1行：标题行
+  h += '<tr class="hd"><td>积分规则</td>';
+  for (var d = 1; d <= 31; d++) h += '<td></td>';
+  h += '</tr>';
+  // 第2行：星期行（只写"星期  "，留空自己填）
+  h += '<tr class="sm"><td></td>';
+  for (var d = 1; d <= 31; d++) h += '<td>星期  </td>';
+  h += '</tr>';
+  // 规则行
+  for (var i = 0; i < rewardRules.length; i++) {
+    h += '<tr class="gn"><td>' + _esc(rewardRules[i].name) + '</td>';
+    for (var d = 1; d <= 31; d++) h += '<td></td>';
+    h += '</tr>';
+  }
+  for (var i = 0; i < penaltyRules.length; i++) {
+    h += '<tr class="rw"><td>' + _esc(penaltyRules[i].name) + '</td>';
+    for (var d = 1; d <= 31; d++) h += '<td></td>';
+    h += '</tr>';
+  }
+  h += '</table>';
+
+  h += '</body></html>';
+
+  var fileName = (kidName || '积分奖惩表') + '_' + rangeLabel + '.xls';
+  var blob = new Blob(['\ufeff' + h], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  var link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+  showToast('Excel 已导出', 'plus-toast');
+}
 
 </script>
 </body>
