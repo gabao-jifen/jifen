@@ -961,9 +961,10 @@ function delRecord(id) {
 }
 
 function renderRedeem() {
+  var allEarn = records.reduce(function(s, r) { return s + r.pts; }, 0);
+  var allRedeemCost = redeemHistory.reduce(function(s, h) { return s + h.cost; }, 0);
+  var total = allEarn - allRedeemCost;
   var m = monthStr();
-  var total = records.filter(function(r) { return r.date.startsWith(m); }).reduce(function(s, r) { return s + r.pts; }, 0)
-    - redeemHistory.filter(function(h) { return h.month === m; }).reduce(function(s, h) { return s + h.cost; }, 0);
   var btnColors = ['btn-orange', 'btn-blue', ''];
   var html = '';
   for (var i = 0; i < redeemRewards.length; i++) {
@@ -1000,10 +1001,11 @@ function renderRedeem() {
 function doRedeem(rwId) {
   var rw = redeemRewards.find(function(r) { return r.id === rwId; });
   if (!rw) return;
-  var m = monthStr();
-  var total = records.filter(function(r) { return r.date.startsWith(m); }).reduce(function(s, r) { return s + r.pts; }, 0)
-    - redeemHistory.filter(function(h) { return h.month === m; }).reduce(function(s, h) { return s + h.cost; }, 0);
+  var allEarn = records.reduce(function(s, r) { return s + r.pts; }, 0);
+  var allRedeemCost = redeemHistory.reduce(function(s, h) { return s + h.cost; }, 0);
+  var total = allEarn - allRedeemCost;
   if (total < rw.score) { showToast('积分不足，无法兑换', 'minus-toast'); return; }
+  var m = monthStr();
   var monthCount = redeemHistory.filter(function(h) { return h.month === m && h.rwId === rwId; }).length;
   if (monthCount >= rw.monthlyMax) { showToast('本月兑换次数已达上限', 'minus-toast'); return; }
   redeemHistory.push({ month: m, rwId: rwId, title: rw.title, cost: rw.score, date: todayStr(), id: uid(), badgeLabel: rw.badgeLabel || '', badge: rw.badge || 'c1' });
@@ -1015,13 +1017,14 @@ function doRedeem(rwId) {
 }
 
 function doCashRedeem() {
+  var allEarn = records.reduce(function(s, r) { return s + r.pts; }, 0);
+  var allRedeemCost = redeemHistory.reduce(function(s, h) { return s + h.cost; }, 0);
+  var total = allEarn - allRedeemCost;
   var m = monthStr();
-  var total = records.filter(function(r) { return r.date.startsWith(m); }).reduce(function(s, r) { return s + r.pts; }, 0)
-    - redeemHistory.filter(function(h) { return h.month === m; }).reduce(function(s, h) { return s + h.cost; }, 0);
   var input = document.getElementById('cashInput');
   var pts = parseInt(input.value) || 0;
   if (pts <= 0) { showToast('请输入有效的积分数', 'minus-toast'); return; }
-  if (pts > total) { showToast('可用积分不足，当前仅有 ' + total + ' 分', 'minus-toast'); return; }
+  if (pts > total) { showToast('积分不足，当前总积分仅有 ' + total + ' 分', 'minus-toast'); return; }
   showConfirm('确认兑换 ' + pts + ' 积分（即 ¥' + pts + '）？', function(ok) {
     if (!ok) return;
     redeemHistory.push({ month: m, rwId: '__cash__', title: '兑换现金 ¥' + pts, cost: pts, date: todayStr(), id: uid(), badgeLabel: '现金', badge: 'c5' });
@@ -1041,9 +1044,9 @@ function updateCashDisplay() {
   var yuan = document.getElementById('cashYuan');
   var btn = document.getElementById('cashRedeemBtn');
   var available = document.getElementById('cashAvailable');
-  var m = monthStr();
-  var total = records.filter(function(r) { return r.date.startsWith(m); }).reduce(function(s, r) { return s + r.pts; }, 0)
-    - redeemHistory.filter(function(h) { return h.month === m; }).reduce(function(s, h) { return s + h.cost; }, 0);
+  var allEarn = records.reduce(function(s, r) { return s + r.pts; }, 0);
+  var allRedeemCost = redeemHistory.reduce(function(s, h) { return s + h.cost; }, 0);
+  var total = allEarn - allRedeemCost;
   yuan.textContent = '\u00A5' + pts;
   btn.disabled = pts <= 0 || pts > total;
   available.textContent = '总积分：' + total;
