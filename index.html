@@ -324,7 +324,7 @@ body.edit-mode .add-reward-btn{display:flex}
         <span class="cash-redeem-yuan" id="cashYuan">&#165;0</span>
         <button class="cash-redeem-btn" id="cashRedeemBtn" onclick="doCashRedeem()" disabled>确认兑换</button>
       </div>
-      <div class="cash-available" id="cashAvailable">当前可用积分：0</div>
+      <div class="cash-available" id="cashAvailable">总积分：0</div>
     </div>
     <p class="click-hint" style="margin-bottom:16px">累计积分达到目标即可兑换奖励，兑换后自动扣除对应积分</p>
     <div class="redeem-list" id="redeemList"></div>
@@ -1039,7 +1039,7 @@ function updateCashDisplay() {
     - redeemHistory.filter(function(h) { return h.month === m; }).reduce(function(s, h) { return s + h.cost; }, 0);
   yuan.textContent = '\u00A5' + pts;
   btn.disabled = pts <= 0 || pts > total;
-  available.textContent = '当前可用积分：' + total;
+  available.textContent = '总积分：' + total;
 }
 
 function renderRedeemHistory() {
