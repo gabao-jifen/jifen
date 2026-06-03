@@ -533,7 +533,8 @@ var DEFAULT_REWARD_RULES = [
   { id: 'rr9', name: '主动帮忙做家务（扫地/收碗/整理等）', pts: 0.5, tag: '家务', tagColor: 'c7', desc: '主动承担力所能及的家务劳动' },
   { id: 'rr10', name: '保持好情绪，不发脾气无哭闹', pts: 0.5, tag: '情绪', tagColor: 'c3', desc: '全天保持好情绪，不无故发脾气或哭闹' },
   { id: 'rr11', name: '按时睡觉不拖延（21:30前上床）', pts: 0.5, tag: '习惯', tagColor: 'c0', desc: '在规定时间内上床准备睡觉' },
-  { id: 'rr12', name: '超级表现/进步奖励（妈妈特别加分）', pts: 1, tag: '特别', tagColor: 'c4', desc: '表现突出或有明显进步时妈妈特别加分' }
+  { id: 'rr12', name: '超级表现/进步奖励（妈妈特别加分）', pts: 1, tag: '特别', tagColor: 'c4', desc: '表现突出或有明显进步时妈妈特别加分' },
+  { id: 'rr13', name: '背古文3句', pts: 0.5, tag: '国学', tagColor: 'c6', desc: '每次流利背诵3句或以上古诗文（含古诗、文言小句等），加0.5分。背得越多，获得奖励越多，每加3句额外加0.5分' }
 ];
 
 var DEFAULT_PENALTY_RULES = [
@@ -557,6 +558,12 @@ var penaltyRules = load('kidPenaltyRules', DEFAULT_PENALTY_RULES);
   }
   for (var i = 0; i < penaltyRules.length; i++) {
     if (!penaltyRules[i].tag) { penaltyRules[i].tag = '其他'; penaltyRules[i].tagColor = 'c9'; penaltyRules[i].desc = ''; u2 = true; }
+  }
+  // 补全新增的「背古文3句」规则（老用户自动添加）
+  var hasGw = rewardRules.some(function(r) { return r.id === 'rr13'; });
+  if (!hasGw) {
+    rewardRules.push({ id: 'rr13', name: '背古文3句', pts: 0.5, tag: '国学', tagColor: 'c6', desc: '每次流利背诵3句或以上古诗文（含古诗、文言小句等），加0.5分。背得越多，获得奖励越多，每加3句额外加0.5分' });
+    u1 = true;
   }
   if (u1) save('kidRewardRules', rewardRules);
   if (u2) save('kidPenaltyRules', penaltyRules);
